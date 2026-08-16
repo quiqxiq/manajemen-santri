@@ -15,10 +15,13 @@ class NotifikasiLog extends Model
     protected $fillable = [
         'wali_santri_id',
         'pelanggaran_id',
+        'tagihan_id',
         'channel',
         'pesan',
         'status',
+        'attempts',
         'sent_at',
+        'wa_message_id',
         'error_message',
     ];
 
@@ -26,6 +29,7 @@ class NotifikasiLog extends Model
     {
         return [
             'sent_at' => 'datetime',
+            'attempts' => 'integer',
         ];
     }
 
@@ -37,5 +41,10 @@ class NotifikasiLog extends Model
     public function pelanggaran(): BelongsTo
     {
         return $this->belongsTo(Pelanggaran::class);
+    }
+
+    public function tagihan(): BelongsTo
+    {
+        return $this->belongsTo(Tagihan::class);
     }
 }

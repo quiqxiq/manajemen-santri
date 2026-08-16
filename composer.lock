@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "01746d194ebf1180999b6c4a995a8764",
+    "content-hash": "b8b4970de8b383fe64c541fd7e1951d6",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -1627,6 +1627,43 @@
             "time": "2026-07-22T16:54:36+00:00"
         },
         {
+            "name": "filament/spatie-laravel-media-library-plugin",
+            "version": "v5.7.3",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/filamentphp/spatie-laravel-media-library-plugin.git",
+                "reference": "16d3c2b0a4a47fd03dfe5f448f6b3bb5a53b0587"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/filamentphp/spatie-laravel-media-library-plugin/zipball/16d3c2b0a4a47fd03dfe5f448f6b3bb5a53b0587",
+                "reference": "16d3c2b0a4a47fd03dfe5f448f6b3bb5a53b0587",
+                "shasum": ""
+            },
+            "require": {
+                "filament/support": "self.version",
+                "php": "^8.2",
+                "spatie/laravel-medialibrary": "^11.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Filament\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Filament support for `spatie/laravel-medialibrary`.",
+            "homepage": "https://github.com/filamentphp/filament",
+            "support": {
+                "issues": "https://github.com/filamentphp/filament/issues",
+                "source": "https://github.com/filamentphp/filament"
+            },
+            "time": "2026-07-17T11:47:27+00:00"
+        },
+        {
             "name": "filament/support",
             "version": "v5.7.3",
             "source": {
@@ -2386,6 +2423,90 @@
                 "source": "https://github.com/kirschbaum-development/eloquent-power-joins/tree/4.3.3"
             },
             "time": "2026-07-23T11:41:37+00:00"
+        },
+        {
+            "name": "kstmostofa/laravel-whatsapp",
+            "version": "v1.0.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/kstmostofa/laravel-whatsapp.git",
+                "reference": "ac2825c883f5372a08b1669e203e5bf8a8e3a5e8"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/kstmostofa/laravel-whatsapp/zipball/ac2825c883f5372a08b1669e203e5bf8a8e3a5e8",
+                "reference": "ac2825c883f5372a08b1669e203e5bf8a8e3a5e8",
+                "shasum": ""
+            },
+            "require": {
+                "guzzlehttp/guzzle": "^7.5",
+                "illuminate/console": "^11.0|^12.0|^13.0",
+                "illuminate/contracts": "^11.0|^12.0|^13.0",
+                "illuminate/http": "^11.0|^12.0|^13.0",
+                "illuminate/support": "^11.0|^12.0|^13.0",
+                "php": "^8.2",
+                "symfony/process": "^7.0|^8.0"
+            },
+            "require-dev": {
+                "livewire/flux": "^2.0",
+                "livewire/livewire": "^3.4|^4.0",
+                "orchestra/testbench": "^9.0|^10.0|^11.0",
+                "phpunit/phpunit": "^10.5|^11.0|^12.0"
+            },
+            "suggest": {
+                "laravel/reverb": "^1.0 — enables live UI updates (incoming messages, QR codes, ack changes) via Laravel broadcasting.",
+                "livewire/flux": "^2.0 — the Flux UI component library the bundled UI is built on.",
+                "livewire/livewire": "^3.4 — enables the bundled admin UI."
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "aliases": {
+                        "WhatsApp": "Kstmostofa\\LaravelWhatsApp\\Facades\\WhatsApp"
+                    },
+                    "providers": [
+                        "Kstmostofa\\LaravelWhatsApp\\LaravelWhatsAppServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Kstmostofa\\LaravelWhatsApp\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Md Mostafijur Rahman",
+                    "email": "mostofa122@gmail.com",
+                    "homepage": "https://github.com/kstmostofa"
+                }
+            ],
+            "description": "Dual-backend Laravel package for WhatsApp: Meta Cloud API + bundled whatsapp-web.js sidecar. Ships a Livewire/Flux admin UI, queued jobs, webhooks with HMAC, Eloquent models, broadcasting, and CLI lifecycle commands.",
+            "homepage": "https://kstmostofa.github.io/laravel-whatsapp/",
+            "keywords": [
+                "chatbot",
+                "flux",
+                "laravel",
+                "livewire",
+                "messaging",
+                "meta",
+                "webhooks",
+                "whatsapp",
+                "whatsapp-business",
+                "whatsapp-cloud-api",
+                "whatsapp-web",
+                "whatsapp-web-js"
+            ],
+            "support": {
+                "docs": "https://kstmostofa.github.io/laravel-whatsapp/",
+                "issues": "https://github.com/kstmostofa/laravel-whatsapp/issues",
+                "source": "https://github.com/kstmostofa/laravel-whatsapp"
+            },
+            "time": "2026-07-04T20:00:11+00:00"
         },
         {
             "name": "laravel/framework",

@@ -4,6 +4,110 @@
 @source '../../storage/framework/views/*.php';
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    /* --- PRD Design System: Pondok Pesantren Miftahul Ihsan --- */
+    --color-songkok: #1e4a3b;   /* Hijau Songkok — utama */
+    --color-songkok-dark: #14352a;
+    --color-sepuh: #b08d3d;     /* Emas Sepuh — aksen */
+    --color-kitab: #f2e9d8;     /* Kertas Kitab — latar */
+    --color-pegon: #241f18;     /* Tinta Pegon — teks utama */
+    --color-selat: #2c5f6f;     /* Biru Selat — aksen sekunder */
+    --color-page: #fbf8f1;      /* Putih Netral — permukaan kartu */
+
+    --font-display: 'Fraunces', ui-serif, Georgia, serif;
+    --font-body: 'Karla', ui-sans-serif, system-ui, sans-serif;
+    --font-label: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
+    --font-arab: 'Amiri', ui-serif, Georgia, serif;
+}
+
+/* --- Scroll reveal (PRD 8.6: fade-in saat section masuk viewport) --- */
+.reveal {
+    opacity: 0;
+    transform: translateY(26px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+}
+
+.reveal.is-visible {
+    opacity: 1;
+    transform: none;
+}
+
+/* --- Motif "Rantai Sanad" (PRD 8.4): garis digambar saat terlihat --- */
+.sanad-path {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    transition: stroke-dashoffset 1.8s ease 0.2s;
+}
+
+.is-visible .sanad-path {
+    stroke-dashoffset: 0;
+}
+
+.sanad-node {
+    transition: transform 0.4s ease, box-shadow 0.4s ease;
+}
+
+.sanad-node:hover {
+    transform: translateY(-4px);
+}
+
+/* --- Kartu: hover elevasi ringan + garis emas menebal (PRD 8.5/8.6) --- */
+.card-hover {
+    transition: transform 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+}
+
+.card-hover:hover {
+    transform: translateY(-5px);
+    border-color: var(--color-sepuh);
+    box-shadow: 0 14px 30px -14px rgb(30 74 59 / 0.35);
+}
+
+/* --- Navbar sticky: perubahan latar saat scroll --- */
+#site-nav {
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+#site-nav.is-scrolled {
+    background-color: rgb(20 53 42 / 0.92);
+    box-shadow: 0 6px 20px -8px rgb(20 53 42 / 0.5);
+}
+
+/* --- Hormati prefers-reduced-motion (PRD 8.6) --- */
+@media (prefers-reduced-motion: reduce) {
+    .reveal,
+    .sanad-path,
+    .card-hover,
+    .sanad-node {
+        opacity: 1 !important;
+        transform: none !important;
+        transition: none !important;
+    }
+}
+
+/* --- Hero arabic accent --- */
+.arabic-accent {
+    font-family: var(--font-arab);
+    direction: rtl;
+}
+
+/* --- Aksesibilitas: focus state terlihat jelas (PRD 8.7) --- */
+:focus-visible {
+    outline: 2px solid var(--color-sepuh);
+    outline-offset: 2px;
+}
+
+/* --- Scroll halus antar-anchor; dimatikan bila user minta reduced motion --- */
+html {
+    scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+}
+
+/* --- Dropdown navbar: keyboard tetap bisa membuka lewat focus-within --- */
+.nav-dropdown:focus-within .nav-dropdown-panel,
+.nav-dropdown:hover .nav-dropdown-panel {
+    display: block;
 }

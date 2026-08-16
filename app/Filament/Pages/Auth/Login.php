@@ -3,6 +3,7 @@
 namespace App\Filament\Pages\Auth;
 
 use App\Models\User;
+use App\Models\WaliSantri;
 use Filament\Auth\Pages\Login as BaseLogin;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Component;
@@ -25,15 +26,52 @@ class Login extends BaseLogin
     protected function getUsernameFormComponent(): Component
     {
         return TextInput::make('username')
-            ->label('Username')
+            ->label('Username / No. HP')
+            ->helperText('Wali santri bisa masuk memakai nomor HP yang terdaftar.')
             ->required()
             ->autocomplete()
             ->autofocus();
     }
 
+    /**
+     * Cari user berdasarkan username ATAU nomor HP wali (format bebas:
+     * 08xx, 62xx, +62, dengan strip/spasi — dibandingkan dalam bentuk digit).
+     */
+    private function resolveUserByIdentifier(string $identifier): ?User
+    {
+        $user = User::where('username', $identifier)->first();
+
+        if ($user) {
+            return $user;
+        }
+
+        $digits = ltrim(preg_replace('/\D+/', '', $identifier) ?? '', '0');
+
+        if ($digits === '') {
+            return null;
+        }
+
+        $user = User::where('username', $digits)->first();
+
+        if ($user) {
+            return $user;
+        }
+
+        // Cocokkan dengan nomor HP wali (normalisasi tanpa '0' di depan).
+        foreach (WaliSantri::with('user')->get() as $wali) {
+            $noHpDigits = ltrim(preg_replace('/\D+/', '', $wali->no_hp ?? '') ?? '', '0');
+
+            if ($noHpDigits === $digits) {
+                return $wali->user;
+            }
+        }
+
+        return null;
+    }
+
     protected function getCredentialsFromFormData(#[SensitiveParameter] array $data): array
     {
-        $user = User::where('username', $data['username'])->first();
+        $user = $this->resolveUserByIdentifier($data['username']);
 
         if ($user && $user->locked_until && $user->locked_until->isFuture()) {
             throw ValidationException::withMessages([
@@ -42,7 +80,7 @@ class Login extends BaseLogin
         }
 
         return [
-            'username' => $data['username'],
+            'username' => $user?->username ?? $data['username'],
             'password' => $data['password'],
         ];
     }
@@ -50,10 +88,13 @@ class Login extends BaseLogin
     protected function throwFailureValidationException(): never
     {
         $data = $this->form->getState();
+
         if (isset($data['username'])) {
-            $user = User::where('username', $data['username'])->first();
+            $user = $this->resolveUserByIdentifier($data['username']);
+
             if ($user) {
                 $user->increment('failed_login_attempts');
+
                 if ($user->failed_login_attempts >= 3) {
                     $user->update([
                         'locked_until' => now()->addMinutes(15),

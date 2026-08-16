@@ -4,8 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\Kamar;
 use App\Models\KategoriPelanggaran;
-use App\Models\MataPelajaran;
-use App\Models\NilaiAkademik;
 use App\Models\Pelanggaran;
 use App\Models\Pembayaran;
 use App\Models\Pengurus;
@@ -33,11 +31,6 @@ class DatabaseSeeder extends Seeder
         $kamarB = Kamar::create(['nama_kamar' => 'Kamar Ibnu Sina', 'kapasitas' => 20, 'keterangan' => 'Gedung A Lantai 2']);
         $kamarC = Kamar::create(['nama_kamar' => 'Kamar Al-Farabi', 'kapasitas' => 15, 'keterangan' => 'Gedung B Lantai 1']);
 
-        $mapelFiqih = MataPelajaran::create(['nama_mapel' => 'Fiqih']);
-        $mapelNahwu = MataPelajaran::create(['nama_mapel' => 'Nahwu']);
-        $mapelShorof = MataPelajaran::create(['nama_mapel' => 'Shorof']);
-        $mapelHadits = MataPelajaran::create(['nama_mapel' => 'Hadits Arbain']);
-
         $katRingan = KategoriPelanggaran::create(['nama_kategori' => 'Terlambat Berjamaah', 'poin' => 5]);
         $katSedang = KategoriPelanggaran::create(['nama_kategori' => 'Keluar Tanpa Izin', 'poin' => 25]);
         $katBerat = KategoriPelanggaran::create(['nama_kategori' => 'Membawa HP / Elektronik Terlarang', 'poin' => 50]);
@@ -56,7 +49,7 @@ class DatabaseSeeder extends Seeder
 
         // Link Demo Wali & Santri
         $waliUser = User::where('username', 'wali')->first();
-        $santriUser = User::where('username', 'santri')->first();
+        $santriUser = User::where('username', 'santri')->first(); // portal santri dihapus, user_id dibiarkan null
 
         $waliDemo = WaliSantri::create([
             'user_id' => $waliUser->id,
@@ -66,7 +59,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $santriDemo = Santri::create([
-            'user_id' => $santriUser->id,
+            'user_id' => $santriUser?->id,
             'nis' => 'SAN-2026001',
             'nama_lengkap' => 'Muhammad Ali (Santri Demo)',
             'tempat_lahir' => 'Bandung',
@@ -103,17 +96,7 @@ class DatabaseSeeder extends Seeder
             'is_penanggung_jawab_utama' => false,
         ]);
 
-        // Academic & Tahfidz Records
-        NilaiAkademik::create([
-            'santri_id' => $santriDemo->id,
-            'mata_pelajaran_id' => $mapelFiqih->id,
-            'pengurus_id' => $pengurusUstadz->id,
-            'semester' => 1,
-            'tahun_ajaran' => '2025/2026',
-            'nilai' => 88.50,
-            'keterangan' => 'Sangat Baik',
-        ]);
-
+        // Tahfidz Records
         Tahfidz::create([
             'santri_id' => $santriDemo->id,
             'pengurus_id' => $pengurusUstadz->id,
@@ -185,5 +168,11 @@ class DatabaseSeeder extends Seeder
             'alasan' => 'Menghadiri pernikahan kakak',
             'status' => 'diajukan',
         ]);
+
+        // Data santri asli dari Excel (56 santri + 5 kamar)
+        $this->call(SantriMiftahulIhsanSeeder::class);
+
+        // Akun wali santri (orang tua) dari Excel — username = digit no HP, password: password
+        $this->call(WaliSantriMiftahulIhsanSeeder::class);
     }
 }

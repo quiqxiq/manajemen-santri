@@ -57,11 +57,6 @@ class Santri extends Model implements HasMedia
             ->withTimestamps();
     }
 
-    public function nilaiAkademik(): HasMany
-    {
-        return $this->hasMany(NilaiAkademik::class);
-    }
-
     public function tahfidz(): HasMany
     {
         return $this->hasMany(Tahfidz::class);

@@ -4,6 +4,8 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,7 +16,7 @@ use Spatie\Permission\Traits\HasRoles;
 
 #[Fillable(['name', 'username', 'email', 'password', 'is_active', 'failed_login_attempts', 'locked_until', 'last_login_at'])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable
+class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, HasRoles;
@@ -48,5 +50,19 @@ class User extends Authenticatable
     public function pengurus(): HasOne
     {
         return $this->hasOne(Pengurus::class);
+    }
+
+    /**
+     * Portal sendiri-sendiri: staf hanya masuk panel admin,
+     * wali santri hanya masuk panel wali.
+     */
+    public function canAccessPanel(Panel $panel): bool
+    {
+        if ($panel->getId() === 'wali') {
+            return $this->hasRole('Wali Santri');
+        }
+
+        return $this->hasAnyRole(['Admin', 'Operator', 'Pengasuh', 'Keamanan'])
+            || $this->hasRole('super_admin');
     }
 }

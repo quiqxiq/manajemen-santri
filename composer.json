@@ -9,6 +9,8 @@
         "php": "^8.3",
         "bezhansalleh/filament-shield": "^4.3",
         "filament/filament": "^5.7",
+        "filament/spatie-laravel-media-library-plugin": "^5.7",
+        "kstmostofa/laravel-whatsapp": "*",
         "laravel/framework": "^13.8",
         "laravel/tinker": "^3.0",
         "spatie/laravel-activitylog": "^5.0",
