@@ -40,8 +40,8 @@
                     </p>
 
                     <div class="mt-9 flex flex-col gap-4 sm:flex-row sm:items-center">
-                        <a href="#ppdb" class="inline-flex items-center justify-center gap-2 rounded-full bg-sepuh px-7 py-3.5 text-base font-bold text-pegon transition hover:bg-sepuh/90 hover:shadow-xl">
-                            Daftar PPDB Sekarang
+                        <a href="{{ url('/wali/login') }}" class="inline-flex items-center justify-center gap-2 rounded-full bg-sepuh px-7 py-3.5 text-base font-bold text-pegon transition hover:bg-sepuh/90 hover:shadow-xl">
+                            Login
                             <svg class="h-5 w-5"><use href="#i-arrow-right"/></svg>
                         </a>
                         <a href="https://wa.me/6287738888832" target="_blank" rel="noopener" class="inline-flex items-center justify-center gap-2 rounded-full border-2 border-white/30 px-7 py-3 text-base font-semibold text-white transition hover:border-sepuh hover:text-sepuh">

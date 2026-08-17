@@ -48,7 +48,8 @@ class PembayaranResource extends Resource
                     ->label('Santri')
                     ->relationship('santri', 'nama_lengkap')
                     ->required()
-                    ->readOnly(),
+                    ->disabled()
+                    ->dehydrated(),
                 Forms\Components\TextInput::make('jumlah_bayar')
                     ->label('Jumlah Bayar (Rp)')
                     ->numeric()

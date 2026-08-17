@@ -27,7 +27,6 @@
     @include('landing.sections.galeri')
     @include('landing.sections.testimoni')
     @include('landing.sections.berita')
-    @include('landing.sections.ppdb')
     @include('landing.sections.faq')
     @include('landing.sections.kontak')
 </main>

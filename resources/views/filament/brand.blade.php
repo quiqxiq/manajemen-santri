@@ -24,4 +24,12 @@
     .fi-simple-page .brand-lockup span {
         white-space: nowrap;
     }
+
+    /* Filament membungkus logo dengan height inline 1.5rem — jauh lebih pendek dari
+       lockup kolom (logo + teks), sehingga kontennya menimpa heading "Sign in".
+       Biarkan tinggi mengikuti konten dan beri jarak sebelum heading. */
+    .fi-simple-page .fi-logo {
+        height: auto !important;
+        margin-bottom: 1rem;
+    }
 </style>

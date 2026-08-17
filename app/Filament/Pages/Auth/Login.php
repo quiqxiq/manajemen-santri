@@ -25,9 +25,13 @@ class Login extends BaseLogin
 
     protected function getUsernameFormComponent(): Component
     {
+        $isWaliPanel = filament()->getCurrentPanel()->getId() === 'wali';
+
         return TextInput::make('username')
             ->label('Username / No. HP')
-            ->helperText('Wali santri bisa masuk memakai nomor HP yang terdaftar.')
+            ->helperText($isWaliPanel
+                ? 'Wali santri bisa masuk memakai nomor HP yang terdaftar.'
+                : 'Gunakan username akun staf / pengurus.')
             ->required()
             ->autocomplete()
             ->autofocus();

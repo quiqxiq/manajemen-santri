@@ -49,8 +49,8 @@
             <li><a href="#kontak" class="rounded-md px-3 py-2 text-sm font-medium text-white/90 transition hover:text-sepuh">Kontak</a></li>
 
             <li class="ml-2">
-                <a href="#ppdb" class="inline-flex items-center gap-2 rounded-full bg-sepuh px-5 py-2.5 text-sm font-bold text-pegon transition hover:bg-sepuh/90 hover:shadow-lg">
-                    Daftar PPDB
+                <a href="{{ url('/wali/login') }}" class="inline-flex items-center gap-2 rounded-full bg-sepuh px-5 py-2.5 text-sm font-bold text-pegon transition hover:bg-sepuh/90 hover:shadow-lg">
+                    Login
                     <svg class="h-4 w-4"><use href="#i-arrow-right"/></svg>
                 </a>
             </li>
@@ -78,8 +78,8 @@
             <li><a href="#galeri" class="block rounded-lg px-3 py-2.5 text-sm font-medium text-white/90 hover:bg-white/10">Galeri</a></li>
             <li><a href="#kontak" class="block rounded-lg px-3 py-2.5 text-sm font-medium text-white/90 hover:bg-white/10">Kontak</a></li>
             <li class="pt-2">
-                <a href="#ppdb" class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-sepuh px-5 py-3 text-sm font-bold text-pegon">
-                    Daftar PPDB Sekarang
+                <a href="{{ url('/wali/login') }}" class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-sepuh px-5 py-3 text-sm font-bold text-pegon">
+                    Login
                     <svg class="h-4 w-4"><use href="#i-arrow-right"/></svg>
                 </a>
             </li>

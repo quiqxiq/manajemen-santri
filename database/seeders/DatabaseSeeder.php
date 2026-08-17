@@ -174,5 +174,8 @@ class DatabaseSeeder extends Seeder
 
         // Akun wali santri (orang tua) dari Excel — username = digit no HP, password: password
         $this->call(WaliSantriMiftahulIhsanSeeder::class);
+
+        // Data mock untuk semua menu (idempotent — tidak mengubah data asli)
+        $this->call(MockDataSeeder::class);
     }
 }

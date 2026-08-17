@@ -53,10 +53,11 @@ class RoleAndPermissionSeeder extends Seeder
                 ...$view('Perizinan'), 'Create:Perizinan', 'Update:Perizinan',
             ],
 
-            // Wali Santri: lihat data anak sendiri (di-scope di panel wali).
+            // Wali Santri: lihat data anak sendiri (di-scope di panel wali)
+            // + mengajukan perizinan sendiri dari portal wali.
             'Wali Santri' => [
                 ...$view('Santri'), ...$view('Pelanggaran'), ...$view('Tagihan'),
-                ...$view('Tahfidz'), ...$view('Perizinan'),
+                ...$view('Tahfidz'), ...$view('Perizinan'), 'Create:Perizinan',
             ],
         ];
 

@@ -29,7 +29,7 @@
                     <li><a href="#visi-misi" class="transition hover:text-sepuh">Visi &amp; Misi</a></li>
                     <li><a href="#unit-pendidikan" class="transition hover:text-sepuh">Unit Pendidikan</a></li>
                     <li><a href="#prestasi" class="transition hover:text-sepuh">Prestasi</a></li>
-                    <li><a href="#ppdb" class="transition hover:text-sepuh">PPDB Online</a></li>
+                    <li><a href="{{ url('/wali/login') }}" class="transition hover:text-sepuh">Login Wali Santri</a></li>
                     <li><a href="#kontak" class="transition hover:text-sepuh">Kontak</a></li>
                 </ul>
             </nav>
