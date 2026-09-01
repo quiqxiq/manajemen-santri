@@ -8,9 +8,7 @@ use App\Models\Pelanggaran;
 use App\Models\Pembayaran;
 use App\Models\Pengurus;
 use App\Models\Penghargaan;
-use App\Models\PenyakitBawaan;
 use App\Models\Perizinan;
-use App\Models\RiwayatKesehatan;
 use App\Models\Santri;
 use App\Models\Tagihan;
 use App\Models\Tahfidz;
@@ -108,24 +106,6 @@ class DatabaseSeeder extends Seeder
             'status' => 'lulus',
             'catatan' => 'Lancar dan fasih',
             'tanggal' => now(),
-        ]);
-
-        // Health record
-        PenyakitBawaan::create([
-            'santri_id' => $santriDemo->id,
-            'nama_penyakit' => 'Asma',
-            'keterangan' => 'Alergi debu dan udara dingin',
-        ]);
-
-        RiwayatKesehatan::create([
-            'santri_id' => $santriDemo->id,
-            'pengurus_id' => $pengurusKeamanan->id,
-            'tanggal_kejadian' => now()->subDays(2),
-            'keluhan' => 'Demam dan pusing',
-            'suhu_tubuh' => 38.2,
-            'diagnosis_sementara' => 'Flu biasa',
-            'tindakan' => 'istirahat_kamar',
-            'status' => 'selesai',
         ]);
 
         // Tagihan & Pembayaran for Santri Demo (Lunas)

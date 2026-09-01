@@ -7,9 +7,7 @@ use App\Models\NotifikasiLog;
 use App\Models\Pelanggaran;
 use App\Models\Pembayaran;
 use App\Models\Penghargaan;
-use App\Models\PenyakitBawaan;
 use App\Models\Perizinan;
-use App\Models\RiwayatKesehatan;
 use App\Models\Santri;
 use App\Models\Tagihan;
 use App\Models\Tahfidz;
@@ -112,42 +110,6 @@ class MockDataSeeder extends Seeder
                 'status' => $pick($status),
                 'catatan' => 'Setoran mock — lancar',
                 'tanggal' => now()->subDays(rand(0, 20))->toDateString(),
-            ];
-        });
-
-        // ---------------------------------------------------------------- //
-        // Riwayat Kesehatan (target 6)
-        // ---------------------------------------------------------------- //
-        $this->fillUpTo(RiwayatKesehatan::class, 6, function () use ($santri, $pengurusIds, $pick) {
-            $tindakan = ['istirahat_kamar', 'pemberian_obat', 'mini_puskesmas', 'rujuk_rs'];
-            $status = ['dalam_perawatan', 'selesai'];
-
-            return [
-                'santri_id' => $santri->random()->id,
-                'pengurus_id' => $pick($pengurusIds),
-                'tanggal_kejadian' => now()->subDays(rand(1, 30))->toDateString(),
-                'keluhan' => 'Demam ringan (mock)',
-                'suhu_tubuh' => round(36.5 + rand(0, 30) / 10, 1),
-                'diagnosis_sementara' => 'Gejala flu (mock)',
-                'tindakan' => $pick($tindakan),
-                'status' => $pick($status),
-            ];
-        });
-
-        // ---------------------------------------------------------------- //
-        // Penyakit Bawaan (target 5)
-        // ---------------------------------------------------------------- //
-        $this->fillUpTo(PenyakitBawaan::class, 5, function () use ($santri, $pick) {
-            $penyakit = [
-                ['nama' => 'Asma', 'ket' => 'Alergi debu dan udara dingin'],
-                ['nama' => 'Alergi Makanan', 'ket' => 'Alergi seafood dan kacang'],
-                ['nama' => 'Maag', 'ket' => 'Perlu makan tepat waktu'],
-            ];
-
-            return [
-                'santri_id' => $santri->random()->id,
-                'nama_penyakit' => $pick($penyakit)['nama'],
-                'keterangan' => $pick($penyakit)['ket'].' (mock)',
             ];
         });
 

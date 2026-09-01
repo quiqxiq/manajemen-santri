@@ -42,11 +42,6 @@ class Pengurus extends Model
         return $this->hasMany(Tahfidz::class);
     }
 
-    public function riwayatKesehatanDicatat(): HasMany
-    {
-        return $this->hasMany(RiwayatKesehatan::class);
-    }
-
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()->logOnly(['nama', 'bagian']);

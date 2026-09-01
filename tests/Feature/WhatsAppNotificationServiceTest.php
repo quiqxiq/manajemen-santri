@@ -51,7 +51,7 @@ class WhatsAppNotificationServiceTest extends TestCase
         $webClient = $this->mockWebClient();
         $webClient->shouldReceive('request')
             ->once()
-            ->with('POST', 'sessions/main/messages', Mockery::on(fn (array $options) => ($options['json']['to'] ?? null) === '081234567890'))
+            ->with('POST', 'sessions/main/messages', Mockery::on(fn (array $options) => ($options['json']['to'] ?? null) === '6281234567890'))
             ->andReturn(['id' => 'wa-123']);
 
         app(WhatsAppNotificationService::class)->kirimNotifikasi($log);

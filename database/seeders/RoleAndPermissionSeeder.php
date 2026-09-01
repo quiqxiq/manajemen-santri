@@ -28,28 +28,25 @@ class RoleAndPermissionSeeder extends Seeder
         $view = fn (string $e): array => ["ViewAny:{$e}", "View:{$e}"];
 
         $rolesPermissions = [
-            // Operator: staf pengelola operasional harian (CRUD data).
-            'Operator' => [
-                ...$crud('Santri'), ...$crud('WaliSantri'), ...$crud('Kamar'),
-                ...$crud('KategoriPelanggaran'), ...$crud('Pelanggaran'), ...$crud('Penghargaan'),
-                ...$crud('Tagihan'), ...$crud('Pembayaran'), ...$crud('Perizinan'),
-                ...$crud('RiwayatKesehatan'), ...$crud('PenyakitBawaan'), ...$crud('Pengurus'),
-                ...$crud('Tahfidz'), ...$view('NotifikasiLog'),
+            // Keuangan: mengelola tagihan, pembayaran, serta melihat data santri & log notifikasi.
+            'Keuangan' => [
+                ...$view('Santri'), ...$view('WaliSantri'),
+                ...$crud('Tagihan'), ...$crud('Pembayaran'),
+                ...$view('NotifikasiLog'),
             ],
 
-            // Pengasuh: hanya baca (read only).
+            // Pengasuh: hanya baca (read only) untuk monitoring santri & asrama.
             'Pengasuh' => [
                 ...$view('Santri'), ...$view('WaliSantri'), ...$view('Kamar'),
                 ...$view('KategoriPelanggaran'), ...$view('Pelanggaran'), ...$view('Penghargaan'),
                 ...$view('Tagihan'), ...$view('Pembayaran'), ...$view('Perizinan'),
-                ...$view('RiwayatKesehatan'), ...$view('PenyakitBawaan'), ...$view('Pengurus'),
-                ...$view('Tahfidz'), ...$view('NotifikasiLog'),
+                ...$view('Pengurus'), ...$view('Tahfidz'), ...$view('NotifikasiLog'),
             ],
 
             // Keamanan: pelanggaran, kategori pelanggaran, dan perizinan.
             'Keamanan' => [
                 ...$view('Santri'), ...$view('KategoriPelanggaran'),
-                ...$view('Pelanggaran'), 'Create:Pelanggaran', 'Update:Pelanggaran',
+                ...$crud('Pelanggaran'), ...$crud('KategoriPelanggaran'),
                 ...$view('Perizinan'), 'Create:Perizinan', 'Update:Perizinan',
             ],
 
@@ -71,18 +68,15 @@ class RoleAndPermissionSeeder extends Seeder
             $role->syncPermissions($permissions);
         }
 
-        // Admin: akses penuh ke SEMUA permission yang ada saat ini — di-sync di akhir
-        // (bukan saat array dibangun) supaya mencakup entitas panel lain yang tidak
-        // tercantum di daftar per-role di atas (mis. User, WhatsAppTemplate, halaman).
+        // Admin: akses penuh ke SEMUA permission yang ada saat ini
         $adminRole = Role::firstOrCreate(['name' => 'Admin', 'guard_name' => 'web']);
         $adminRole->syncPermissions(Permission::all()->pluck('name')->toArray());
 
         $users = [
             ['username' => 'admin', 'name' => 'Administrator', 'email' => 'admin@miftahulihsan.sch.id', 'role' => 'Admin'],
-            ['username' => 'tatausaha', 'name' => 'Staf Tata Usaha', 'email' => 'tu@miftahulihsan.sch.id', 'role' => 'Operator'],
-            ['username' => 'keuangan', 'name' => 'Staf Keuangan', 'email' => 'keuangan@miftahulihsan.sch.id', 'role' => 'Operator'],
+            ['username' => 'keuangan', 'name' => 'Staf Keuangan', 'email' => 'keuangan@miftahulihsan.sch.id', 'role' => 'Keuangan'],
             ['username' => 'keamanan', 'name' => 'Pengurus Keamanan', 'email' => 'keamanan@miftahulihsan.sch.id', 'role' => 'Keamanan'],
-            ['username' => 'ustadz', 'name' => 'Ustadz Ahmad', 'email' => 'ustadz@miftahulihsan.sch.id', 'role' => 'Operator'],
+            ['username' => 'ustadz', 'name' => 'Ustadz Ahmad', 'email' => 'ustadz@miftahulihsan.sch.id', 'role' => 'Admin'],
             ['username' => 'pengasuh', 'name' => 'KH. Abdullah (Pengasuh)', 'email' => 'pengasuh@miftahulihsan.sch.id', 'role' => 'Pengasuh'],
             ['username' => 'wali', 'name' => 'Wali Santri Demo', 'email' => 'wali@miftahulihsan.sch.id', 'role' => 'Wali Santri'],
         ];
@@ -114,10 +108,12 @@ class RoleAndPermissionSeeder extends Seeder
     {
         $rename = [
             'Super Admin' => 'Admin',
-            'Admin/Tata Usaha' => 'Operator',
-            'Bagian Keuangan' => 'Operator',
-            'Ustadz/Guru' => 'Operator',
+            'super_admin' => 'Admin',
+            'Admin/Tata Usaha' => 'Admin',
+            'Bagian Keuangan' => 'Keuangan',
+            'Ustadz/Guru' => 'Admin',
             'Pengurus Keamanan' => 'Keamanan',
+            'Operator' => 'Admin',
         ];
 
         foreach ($rename as $old => $new) {
@@ -147,7 +143,7 @@ class RoleAndPermissionSeeder extends Seeder
             $oldRole->delete();
         }
 
-        foreach (['Santri'] as $obsolete) {
+        foreach (['Santri', 'Operator', 'Super Admin', 'super_admin'] as $obsolete) {
             Role::where('name', $obsolete)->first()?->delete();
         }
     }
@@ -159,6 +155,8 @@ class RoleAndPermissionSeeder extends Seeder
     {
         Permission::where('name', 'like', '%MataPelajaran%')
             ->orWhere('name', 'like', '%NilaiAkademik%')
+            ->orWhere('name', 'like', '%PenyakitBawaan%')
+            ->orWhere('name', 'like', '%RiwayatKesehatan%')
             ->delete();
     }
 }

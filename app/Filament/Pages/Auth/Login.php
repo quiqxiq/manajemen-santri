@@ -73,14 +73,37 @@ class Login extends BaseLogin
         return null;
     }
 
+    protected function getPasswordFormComponent(): Component
+    {
+        return TextInput::make('password')
+            ->label('Kata Sandi')
+            ->password()
+            ->revealable()
+            ->required();
+    }
+
+    protected function getRememberFormComponent(): Component
+    {
+        return parent::getRememberFormComponent()
+            ->label('Ingat saya di perangkat ini');
+    }
+
     protected function getCredentialsFromFormData(#[SensitiveParameter] array $data): array
     {
         $user = $this->resolveUserByIdentifier($data['username']);
 
-        if ($user && $user->locked_until && $user->locked_until->isFuture()) {
-            throw ValidationException::withMessages([
-                'data.username' => 'Akun Anda terkunci sementara karena 3x gagal login. Coba lagi dalam beberapa menit.',
-            ]);
+        if ($user) {
+            if ($user->locked_until && $user->locked_until->isFuture()) {
+                throw ValidationException::withMessages([
+                    'data.username' => 'Akun Anda terkunci sementara karena 3x gagal login. Coba lagi dalam beberapa menit.',
+                ]);
+            }
+
+            if (! $user->is_active) {
+                throw ValidationException::withMessages([
+                    'data.username' => 'Akun Anda sedang dinonaktifkan. Silakan hubungi administrator.',
+                ]);
+            }
         }
 
         return [
@@ -92,11 +115,27 @@ class Login extends BaseLogin
     protected function throwFailureValidationException(): never
     {
         $data = $this->form->getState();
+        $panel = filament()->getCurrentPanel();
 
         if (isset($data['username'])) {
             $user = $this->resolveUserByIdentifier($data['username']);
 
             if ($user) {
+                if (! $user->is_active) {
+                    throw ValidationException::withMessages([
+                        'data.username' => 'Akun Anda sedang dinonaktifkan. Silakan hubungi administrator.',
+                    ]);
+                }
+
+                if (! $user->canAccessPanel($panel)) {
+                    $isWaliPanel = $panel->getId() === 'wali';
+                    throw ValidationException::withMessages([
+                        'data.username' => $isWaliPanel
+                            ? 'Akun ini tidak memiliki hak akses sebagai wali santri.'
+                            : 'Akun Anda tidak memiliki hak akses ke panel administrasi.',
+                    ]);
+                }
+
                 $user->increment('failed_login_attempts');
 
                 if ($user->failed_login_attempts >= 3) {
@@ -104,12 +143,16 @@ class Login extends BaseLogin
                         'locked_until' => now()->addMinutes(15),
                         'failed_login_attempts' => 0,
                     ]);
+
+                    throw ValidationException::withMessages([
+                        'data.username' => 'Akun Anda terkunci selama 15 menit karena 3x salah memasukkan kata sandi.',
+                    ]);
                 }
             }
         }
 
         throw ValidationException::withMessages([
-            'data.username' => __('filament-panels::auth/pages/login.messages.failed'),
+            'data.username' => 'Username/No. HP atau kata sandi yang Anda masukkan salah.',
         ]);
     }
 }

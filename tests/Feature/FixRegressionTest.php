@@ -17,7 +17,7 @@ class FixRegressionTest extends TestCase
     public function test_pembayaran_form_renders_without_select_readonly_error(): void
     {
         $admin = User::factory()->create(['username' => 'admin', 'password' => 'password']);
-        $role = Role::create(['name' => 'admin', 'guard_name' => 'web']);
+        $role = Role::create(['name' => 'Admin', 'guard_name' => 'web']);
         $role->givePermissionTo(Permission::create(['name' => 'ViewAny:Pembayaran', 'guard_name' => 'web']));
         $role->givePermissionTo(Permission::create(['name' => 'View:Pembayaran', 'guard_name' => 'web']));
         $role->givePermissionTo(Permission::create(['name' => 'Create:Pembayaran', 'guard_name' => 'web']));
