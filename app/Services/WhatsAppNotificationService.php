@@ -37,7 +37,7 @@ class WhatsAppNotificationService
 
         $log->increment('attempts');
 
-        $noHp = $log->waliSantri?->no_hp;
+        $noHp = $this->normalisasiNoHp($log->waliSantri?->no_hp);
 
         if (blank($noHp)) {
             $log->update([
@@ -67,5 +67,31 @@ class WhatsAppNotificationService
 
             throw $e;
         }
+    }
+
+    /**
+     * Normalisasi nomor HP lokal ke format internasional (Indonesia, kode 62)
+     * supaya kompatibel dengan ID chat WhatsApp (…@c.us).
+     *
+     * Contoh:
+     *   "0878-5795-3696"  → "6287857953696"
+     *   "+62 878-5795-3696" → "6287857953696"
+     *   "87857953696"     → "6287857953696"
+     */
+    private function normalisasiNoHp(?string $noHp): ?string
+    {
+        if (blank($noHp)) {
+            return null;
+        }
+
+        $noHp = preg_replace('/\D+/', '', $noHp);
+
+        if (str_starts_with($noHp, '0')) {
+            $noHp = '62'.substr($noHp, 1);
+        } elseif (! str_starts_with($noHp, '62')) {
+            $noHp = '62'.$noHp;
+        }
+
+        return $noHp;
     }
 }

@@ -17,10 +17,15 @@ class WaliOverviewWidget extends BaseWidget
             return [];
         }
 
-        $anakList = $wali->santri;
+        $anakList = $wali->santri()
+            ->withSum('pelanggaran', 'poin')
+            ->withCount([
+                'tagihan as tunggakan_count' => fn ($q) => $q->whereIn('status', ['belum_lunas', 'sebagian']),
+            ])
+            ->get();
         $totalAnak = $anakList->count();
-        $totalPoin = $anakList->sum(fn ($s) => $s->totalPoinPelanggaran());
-        $adaTunggakan = $anakList->contains(fn ($s) => $s->memilikiTunggakan());
+        $totalPoin = (int) $anakList->sum('pelanggaran_sum_poin');
+        $adaTunggakan = $anakList->contains(fn ($s) => ($s->tagihan_tunggakan_count ?? 0) > 0);
 
         $tagihanTerdekat = Tagihan::query()
             ->whereHas('santri.waliSantri', fn ($q) => $q->where('wali_santri.id', $wali->id))

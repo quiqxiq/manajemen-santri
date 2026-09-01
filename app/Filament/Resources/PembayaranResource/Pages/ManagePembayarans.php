@@ -16,8 +16,10 @@ class ManagePembayarans extends ManageRecords
     {
         return [
             Actions\CreateAction::make()
-                ->after(function (Pembayaran $record) {
-                    app(PembayaranService::class)->updateStatusTagihan($record->tagihan);
+                ->after(function (Pembayaran $record): void {
+                    $service = app(PembayaranService::class);
+                    $service->updateStatusTagihan($record->tagihan);
+                    $service->kirimNotifikasiPembayaran($record);
                 }),
         ];
     }

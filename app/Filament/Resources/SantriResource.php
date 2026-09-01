@@ -118,7 +118,7 @@ class SantriResource extends Resource
                     }),
                 Tables\Columns\TextColumn::make('total_poin')
                     ->label('Poin Pelanggaran')
-                    ->state(fn (Santri $record): int => $record->totalPoinPelanggaran())
+                    ->state(fn (Santri $record): int => (int) ($record->pelanggaran_sum_poin ?? 0))
                     ->badge()
                     ->color(fn (int $state): string => match (true) {
                         $state >= 100 => 'danger',
@@ -127,7 +127,7 @@ class SantriResource extends Resource
                     }),
                 Tables\Columns\TextColumn::make('tunggakan')
                     ->label('Tunggakan')
-                    ->state(fn (Santri $record): string => $record->memilikiTunggakan() ? 'Ada' : 'Lunas')
+                    ->state(fn (Santri $record): string => ($record->tagihan_tunggakan_count ?? 0) > 0 ? 'Ada' : 'Lunas')
                     ->badge()
                     ->color(fn (string $state): string => $state === 'Ada' ? 'danger' : 'success'),
             ])
@@ -143,6 +143,12 @@ class SantriResource extends Resource
                     ->label('Kamar')
                     ->relationship('kamar', 'nama_kamar'),
             ])
+            ->modifyQueryUsing(fn ($query) => $query
+                ->withSum('pelanggaran', 'poin')
+                ->withCount([
+                    'tagihan as tagihan_tunggakan_count' => fn ($q) => $q->whereIn('status', ['belum_lunas', 'sebagian']),
+                ])
+            )
             ->recordActions([
                 \Filament\Actions\EditAction::make(),
                 \Filament\Actions\DeleteAction::make(),

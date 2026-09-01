@@ -18,7 +18,9 @@ class WaliPoinChartWidget extends ChartWidget
 
     protected function getData(): array
     {
-        $anakList = auth()->user()?->waliSantri?->santri ?? collect();
+        $anakList = (auth()->user()?->waliSantri?->santri()
+            ->withSum('pelanggaran', 'poin')
+            ->get()) ?? collect();
 
         return [
             'labels' => $anakList
@@ -30,7 +32,7 @@ class WaliPoinChartWidget extends ChartWidget
                 [
                     'label' => 'Poin Pelanggaran',
                     'data' => $anakList
-                        ->map(fn ($santri): int => $santri->totalPoinPelanggaran())
+                        ->map(fn ($santri): int => (int) ($santri->pelanggaran_sum_poin ?? 0))
                         ->values()
                         ->toArray(),
                     'backgroundColor' => '#10b981',

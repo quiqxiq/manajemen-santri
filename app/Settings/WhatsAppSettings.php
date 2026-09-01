@@ -15,6 +15,15 @@ class WhatsAppSettings extends Settings
     /** Key template untuk notifikasi tagihan. */
     public string $template_tagihan;
 
+    /** Key template untuk konfirmasi pembayaran diterima. */
+    public string $template_pembayaran;
+
+    /** Key template untuk notifikasi tagihan lunas. */
+    public string $template_lunas;
+
+    /** Key template untuk pengingat tagihan jatuh tempo. */
+    public string $template_jatuh_tempo;
+
     public static function group(): string
     {
         return 'whatsapp';

@@ -100,10 +100,13 @@ class PerizinanResource extends Resource
                     }),
                 Tables\Columns\TextColumn::make('santri_tunggakan')
                     ->label('Status Tunggakan (R1)')
-                    ->state(fn (Perizinan $record): string => $record->santri->memilikiTunggakan() ? 'Ada Tunggakan' : 'Lunas')
+                    ->state(fn (Perizinan $record): string => (
+                        $record->santri?->tagihan?->where(fn ($t) => in_array($t->status, ['belum_lunas', 'sebagian']))->count() ?? 0
+                    ) > 0 ? 'Ada Tunggakan' : 'Lunas')
                     ->badge()
                     ->color(fn (string $state): string => $state === 'Ada Tunggakan' ? 'danger' : 'success'),
             ])
+            ->modifyQueryUsing(fn ($query) => $query->with(['santri.tagihan']))
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([

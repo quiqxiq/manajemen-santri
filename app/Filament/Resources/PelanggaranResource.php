@@ -8,6 +8,7 @@ use App\Models\Pelanggaran;
 use BackedEnum;
 use Filament\Forms;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -37,7 +38,7 @@ class PelanggaranResource extends Resource
                     ->relationship('kategoriPelanggaran', 'nama_kategori')
                     ->required()
                     ->reactive()
-                    ->afterStateUpdated(function ($state, Forms\Set $set) {
+                    ->afterStateUpdated(function ($state, Set $set) {
                         if ($state) {
                             $kat = KategoriPelanggaran::find($state);
                             if ($kat) {
@@ -51,11 +52,8 @@ class PelanggaranResource extends Resource
                     ->relationship('pengurus', 'nama')
                     ->required()
                     ->searchable(),
-                Forms\Components\TextInput::make('poin')
-                    ->label('Poin Pelanggaran')
-                    ->numeric()
-                    ->required()
-                    ->readOnly(),
+                // Poin otomatis diambil dari kategori yang dipilih, tidak perlu diisi manual.
+                Forms\Components\Hidden::make('poin'),
                 Forms\Components\DatePicker::make('tanggal_kejadian')
                     ->label('Tanggal Kejadian')
                     ->default(now())
