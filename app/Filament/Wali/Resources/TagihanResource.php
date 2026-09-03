@@ -58,6 +58,7 @@ class TagihanResource extends Resource
                 Tables\Columns\TextColumn::make('jatuh_tempo')
                     ->date(),
             ])
+            ->defaultSort('created_at', 'desc')
             ->recordActions([])
             ->toolbarActions([]);
     }

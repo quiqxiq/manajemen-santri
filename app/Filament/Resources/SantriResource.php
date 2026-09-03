@@ -149,6 +149,7 @@ class SantriResource extends Resource
                     'tagihan as tagihan_tunggakan_count' => fn ($q) => $q->whereIn('status', ['belum_lunas', 'sebagian']),
                 ])
             )
+            ->defaultSort('created_at', 'desc')
             ->recordActions([
                 \Filament\Actions\EditAction::make(),
                 \Filament\Actions\DeleteAction::make(),

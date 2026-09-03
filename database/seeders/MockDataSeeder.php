@@ -6,7 +6,6 @@ use App\Models\KategoriPelanggaran;
 use App\Models\NotifikasiLog;
 use App\Models\Pelanggaran;
 use App\Models\Pembayaran;
-use App\Models\Penghargaan;
 use App\Models\Perizinan;
 use App\Models\Santri;
 use App\Models\Tagihan;
@@ -56,21 +55,6 @@ class MockDataSeeder extends Seeder
                 'tanggal_kejadian' => now()->subDays(rand(1, 30))->toDateString(),
                 'poin' => $kat->poin,
                 'status' => 'normal',
-            ];
-        });
-
-        // ---------------------------------------------------------------- //
-        // Penghargaan (target 6)
-        // ---------------------------------------------------------------- //
-        $this->fillUpTo(Penghargaan::class, 6, function () use ($santri, $pengurusIds, $pick) {
-            $bidang = ['akademik', 'tahfidz', 'kedisiplinan', 'lomba'];
-
-            return [
-                'santri_id' => $santri->random()->id,
-                'pengurus_id' => $pick($pengurusIds),
-                'bidang' => $pick($bidang),
-                'deskripsi' => 'Penghargaan mock atas prestasi santri',
-                'tanggal' => now()->subDays(rand(1, 60))->toDateString(),
             ];
         });
 

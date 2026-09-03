@@ -103,6 +103,7 @@ class PembayaranResource extends Resource
                     ->label('Bukti')
                     ->collection('bukti_pembayaran'),
             ])
+            ->defaultSort('created_at', 'desc')
             ->recordActions([
                 \Filament\Actions\EditAction::make(),
                 \Filament\Actions\DeleteAction::make(),

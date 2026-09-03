@@ -70,6 +70,7 @@ class UsersTable
                     ->trueLabel('Hanya User Aktif')
                     ->falseLabel('Hanya User Nonaktif'),
             ])
+            ->defaultSort('created_at', 'desc')
             ->recordActions([
                 EditAction::make()->label('Ubah'),
                 DeleteAction::make()->label('Hapus'),

@@ -63,6 +63,7 @@ class SantriResource extends Resource
                     ->badge()
                     ->color(fn (string $state): string => $state === 'Ada Tunggakan' ? 'danger' : 'success'),
             ])
+            ->defaultSort('created_at', 'desc')
             ->recordActions([])
             ->toolbarActions([]);
     }

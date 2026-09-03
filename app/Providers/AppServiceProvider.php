@@ -2,9 +2,10 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
-
+use Filament\Actions\CreateAction;
+use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -24,5 +25,9 @@ class AppServiceProvider extends ServiceProvider
         Gate::before(function ($user, $ability) {
             return $user->hasRole('Admin') ? true : null;
         });
+
+        // Hapus tombol 'Buat & buat lainnya' (Create & create another) di seluruh aplikasi
+        CreateRecord::disableCreateAnother();
+        CreateAction::configureUsing(fn (CreateAction $action) => $action->createAnother(false));
     }
 }

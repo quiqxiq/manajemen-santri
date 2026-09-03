@@ -121,6 +121,7 @@ class TahfidzResource extends Resource
                         'tidak_lulus' => 'Tidak Lulus',
                     ]),
             ])
+            ->defaultSort('created_at', 'desc')
             ->recordActions([
                 \Filament\Actions\EditAction::make(),
                 \Filament\Actions\DeleteAction::make(),

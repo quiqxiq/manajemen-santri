@@ -67,11 +67,6 @@ class Santri extends Model implements HasMedia
         return $this->hasMany(Pelanggaran::class);
     }
 
-    public function penghargaan(): HasMany
-    {
-        return $this->hasMany(Penghargaan::class);
-    }
-
     public function tagihan(): HasMany
     {
         return $this->hasMany(Tagihan::class);

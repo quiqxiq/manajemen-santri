@@ -79,6 +79,7 @@ class NotifikasiLogResource extends Resource
                         'failed' => 'Gagal',
                     ]),
             ])
+            ->defaultSort('created_at', 'desc')
             ->recordActions([
                 Actions\Action::make('retry')
                     ->label('Kirim Ulang')

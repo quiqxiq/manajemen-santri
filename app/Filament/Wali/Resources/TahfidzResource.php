@@ -55,6 +55,7 @@ class TahfidzResource extends Resource
                     ->badge()
                     ->color(fn (string $state): string => $state === 'lulus' ? 'success' : 'danger'),
             ])
+            ->defaultSort('created_at', 'desc')
             ->recordActions([])
             ->toolbarActions([]);
     }

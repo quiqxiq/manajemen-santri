@@ -7,7 +7,6 @@ use App\Models\KategoriPelanggaran;
 use App\Models\Pelanggaran;
 use App\Models\Pembayaran;
 use App\Models\Pengurus;
-use App\Models\Penghargaan;
 use App\Models\Perizinan;
 use App\Models\Santri;
 use App\Models\Tagihan;

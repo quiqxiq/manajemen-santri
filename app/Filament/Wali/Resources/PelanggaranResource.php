@@ -52,6 +52,7 @@ class PelanggaranResource extends Resource
                 Tables\Columns\TextColumn::make('deskripsi')
                     ->label('Keterangan Kejadian'),
             ])
+            ->defaultSort('created_at', 'desc')
             ->recordActions([])
             ->toolbarActions([]);
     }

@@ -38,7 +38,7 @@ class RoleAndPermissionSeeder extends Seeder
             // Pengasuh: hanya baca (read only) untuk monitoring santri & asrama.
             'Pengasuh' => [
                 ...$view('Santri'), ...$view('WaliSantri'), ...$view('Kamar'),
-                ...$view('KategoriPelanggaran'), ...$view('Pelanggaran'), ...$view('Penghargaan'),
+                ...$view('KategoriPelanggaran'), ...$view('Pelanggaran'),
                 ...$view('Tagihan'), ...$view('Pembayaran'), ...$view('Perizinan'),
                 ...$view('Pengurus'), ...$view('Tahfidz'), ...$view('NotifikasiLog'),
             ],

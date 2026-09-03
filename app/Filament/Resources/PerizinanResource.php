@@ -107,6 +107,7 @@ class PerizinanResource extends Resource
                     ->color(fn (string $state): string => $state === 'Ada Tunggakan' ? 'danger' : 'success'),
             ])
             ->modifyQueryUsing(fn ($query) => $query->with(['santri.tagihan']))
+            ->defaultSort('created_at', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
