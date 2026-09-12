@@ -130,6 +130,7 @@ class PerizinanResource extends Resource
                     ->dateTime('d/m/Y H:i')
                     ->placeholder('-'),
             ])
+            ->modifyQueryUsing(fn ($query) => $query->with(['santri', 'media']))
             ->defaultSort('created_at', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('status')

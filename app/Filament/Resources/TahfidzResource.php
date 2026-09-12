@@ -121,6 +121,7 @@ class TahfidzResource extends Resource
                         'tidak_lulus' => 'Tidak Lulus',
                     ]),
             ])
+            ->modifyQueryUsing(fn ($query) => $query->with(['santri', 'pengurus']))
             ->defaultSort('created_at', 'desc')
             ->recordActions([
                 \Filament\Actions\EditAction::make(),

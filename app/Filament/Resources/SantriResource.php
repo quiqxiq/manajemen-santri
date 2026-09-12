@@ -144,6 +144,7 @@ class SantriResource extends Resource
                     ->relationship('kamar', 'nama_kamar'),
             ])
             ->modifyQueryUsing(fn ($query) => $query
+                ->with(['kamar', 'media'])
                 ->withSum('pelanggaran', 'poin')
                 ->withCount([
                     'tagihan as tagihan_tunggakan_count' => fn ($q) => $q->whereIn('status', ['belum_lunas', 'sebagian']),

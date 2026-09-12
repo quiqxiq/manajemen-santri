@@ -109,6 +109,7 @@ class PelanggaranResource extends Resource
                         'perlu_tindakan' => 'Perlu Tindakan Pengasuh',
                     ]),
             ])
+            ->modifyQueryUsing(fn ($query) => $query->with(['santri', 'kategoriPelanggaran', 'pengurus']))
             ->defaultSort('created_at', 'desc')
             ->recordActions([
                 \Filament\Actions\EditAction::make(),

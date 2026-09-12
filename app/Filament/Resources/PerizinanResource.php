@@ -128,7 +128,7 @@ class PerizinanResource extends Resource
                     ->sortable()
                     ->placeholder('-'),
             ])
-            ->modifyQueryUsing(fn ($query) => $query->with(['santri.tagihan']))
+            ->modifyQueryUsing(fn ($query) => $query->with(['santri.tagihan', 'santri.kamar', 'media']))
             ->defaultSort('created_at', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('status')

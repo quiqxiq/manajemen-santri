@@ -116,6 +116,7 @@ class TagihanResource extends Resource
                         'lainnya' => 'Lainnya',
                     ]),
             ])
+            ->modifyQueryUsing(fn ($query) => $query->with('santri'))
             ->defaultSort('created_at', 'desc')
             ->recordActions([
                 \Filament\Actions\EditAction::make(),

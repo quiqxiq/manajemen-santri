@@ -25,6 +25,7 @@ class PelanggaranResource extends Resource
         $waliId = $user?->waliSantri?->id;
 
         return parent::getEloquentQuery()
+            ->with(['santri', 'kategoriPelanggaran'])
             ->whereHas('santri.waliSantri', function (Builder $query) use ($waliId) {
                 $query->where('wali_santri.id', $waliId);
             });

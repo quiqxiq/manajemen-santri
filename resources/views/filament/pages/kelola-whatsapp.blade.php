@@ -296,61 +296,65 @@
                 sessionId: sessionId,
                 phoneNumber: '',
                 state: { status: 'loading', qr: null, pairingCode: null, error: null },
-                source: null,
+                pollTimer: null,
+                isDestroyed: false,
 
                 init() {
-                    this.refresh();
-                    window.addEventListener('wa-refresh', () => this.refresh());
+                    this.fetchState();
+                    window.addEventListener('wa-refresh', () => this.fetchState());
+                    window.addEventListener('beforeunload', () => this.cleanup());
                 },
 
-                refresh() {
-                    this.closeSource();
+                cleanup() {
+                    this.isDestroyed = true;
+                    if (this.pollTimer) {
+                        clearTimeout(this.pollTimer);
+                        this.pollTimer = null;
+                    }
+                },
+
+                fetchState() {
+                    if (this.isDestroyed) return;
                     fetch(`/whatsapp/state/${encodeURIComponent(this.sessionId)}`)
                         .then((r) => r.json())
                         .then((data) => {
-                            if (['sidecar_down', 'session_not_found', 'error'].includes(data.status)) {
-                                this.state = { status: data.status, qr: null, pairingCode: null, error: data.error };
-                                return;
-                            }
+                            if (this.isDestroyed) return;
                             this.state = data;
-                            this.openSource();
+                            this.scheduleNextPoll();
                         })
                         .catch(() => {
+                            if (this.isDestroyed) return;
                             this.state = { status: 'sidecar_down', qr: null, pairingCode: null, error: 'Tidak dapat menghubungi server sidecar.' };
+                            this.scheduleNextPoll(5000);
                         });
                 },
 
-                openSource() {
-                    if (this.source) return;
-                    const es = new EventSource(`/whatsapp/sse/${encodeURIComponent(this.sessionId)}`);
-                    this.source = es;
-                    const on = (name, fn) => es.addEventListener(name, (e) => {
-                        try { fn(e); } catch (_) {}
-                    });
-                    on('qr', (e) => {
-                        const d = JSON.parse(e.data);
-                        this.state.status = 'qr';
-                        this.state.qr = d.dataUri;
-                    });
-                    on('code', (e) => {
-                        const d = JSON.parse(e.data);
-                        this.state.status = 'qr';
-                        this.state.pairingCode = d.code;
-                    });
-                    on('authenticated', () => { this.state.status = 'authenticated'; });
-                    on('ready', () => { this.state.status = 'ready'; });
-                    on('disconnected', () => { this.state.status = 'disconnected'; });
-                    on('auth_failure', () => { this.state.status = 'auth_failure'; });
-                    on('error', () => { this.state.status = 'error'; });
-                    on('sidecar_down', () => { this.state.status = 'sidecar_down'; this.closeSource(); });
-                    es.onerror = () => {};
+                scheduleNextPoll(overrideMs) {
+                    if (this.pollTimer) {
+                        clearTimeout(this.pollTimer);
+                        this.pollTimer = null;
+                    }
+                    if (this.isDestroyed) return;
+
+                    // Saat status qr/pairing: polling cepat tiap 2.5 detik agar respon scan instan
+                    // Saat ready: polling santai tiap 10 detik
+                    // Saat error/down: polling tiap 5 detik
+                    let delay = overrideMs;
+                    if (!delay) {
+                        if (['qr', 'initializing', 'authenticated'].includes(this.state.status)) {
+                            delay = 2500;
+                        } else if (this.state.status === 'ready') {
+                            delay = 10000;
+                        } else {
+                            delay = 5000;
+                        }
+                    }
+
+                    this.pollTimer = setTimeout(() => this.fetchState(), delay);
                 },
 
-                closeSource() {
-                    if (this.source) {
-                        this.source.close();
-                        this.source = null;
-                    }
+                refresh() {
+                    this.fetchState();
                 },
 
                 statusLabel(status) {

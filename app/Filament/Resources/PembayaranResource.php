@@ -103,6 +103,7 @@ class PembayaranResource extends Resource
                     ->label('Bukti')
                     ->collection('bukti_pembayaran'),
             ])
+            ->modifyQueryUsing(fn ($query) => $query->with(['santri', 'tagihan', 'media']))
             ->defaultSort('created_at', 'desc')
             ->recordActions([
                 \Filament\Actions\EditAction::make(),

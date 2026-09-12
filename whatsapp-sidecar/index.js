@@ -137,6 +137,7 @@ async function bootSession(sessionId) {
     '--disable-translate',
     '--mute-audio',
     '--hide-scrollbars',
+    '--blink-settings=imagesEnabled=false',
     '--disable-background-timer-throttling',
     '--disable-backgrounding-occluded-windows',
     '--disable-renderer-backgrounding',

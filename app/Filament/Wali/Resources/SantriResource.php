@@ -25,6 +25,11 @@ class SantriResource extends Resource
         $waliId = $user?->waliSantri?->id;
 
         return parent::getEloquentQuery()
+            ->with(['kamar'])
+            ->withSum('pelanggaran', 'poin')
+            ->withCount([
+                'tagihan as tagihan_tunggakan_count' => fn ($q) => $q->whereIn('status', ['belum_lunas', 'sebagian']),
+            ])
             ->whereHas('waliSantri', function (Builder $query) use ($waliId) {
                 $query->where('wali_santri.id', $waliId);
             });
@@ -50,7 +55,7 @@ class SantriResource extends Resource
                     ->badge(),
                 Tables\Columns\TextColumn::make('total_poin')
                     ->label('Akumulasi Poin Pelanggaran')
-                    ->state(fn (Santri $record): int => $record->totalPoinPelanggaran())
+                    ->state(fn (Santri $record): int => (int) ($record->pelanggaran_sum_poin ?? $record->totalPoinPelanggaran()))
                     ->badge()
                     ->color(fn (int $state): string => match (true) {
                         $state >= 100 => 'danger',
@@ -59,7 +64,7 @@ class SantriResource extends Resource
                     }),
                 Tables\Columns\TextColumn::make('tunggakan')
                     ->label('Status Keuangan')
-                    ->state(fn (Santri $record): string => $record->memilikiTunggakan() ? 'Ada Tunggakan' : 'Lunas')
+                    ->state(fn (Santri $record): string => (($record->tagihan_tunggakan_count ?? 0) > 0) ? 'Ada Tunggakan' : 'Lunas')
                     ->badge()
                     ->color(fn (string $state): string => $state === 'Ada Tunggakan' ? 'danger' : 'success'),
             ])
