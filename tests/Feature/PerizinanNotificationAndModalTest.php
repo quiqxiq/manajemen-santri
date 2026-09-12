@@ -185,7 +185,7 @@ class PerizinanNotificationAndModalTest extends TestCase
         [$waliUser, $wali, $santri] = $this->siapkanData();
 
         // Buat tagihan belum lunas untuk santri
-        Tagihan::create([
+        $tagihan = Tagihan::create([
             'santri_id' => $santri->id,
             'jenis' => 'spp',
             'bulan' => 7,
@@ -194,6 +194,10 @@ class PerizinanNotificationAndModalTest extends TestCase
             'status' => 'belum_lunas',
             'jatuh_tempo' => now()->subDays(5),
         ]);
+
+        // Verifikasi accessor sisa_tagihan pada model Tagihan
+        $this->assertEquals(350000.0, $tagihan->sisaTagihan());
+        $this->assertEquals(350000.0, $tagihan->sisa_tagihan);
 
         $component = Livewire::actingAs($waliUser)
             ->test(WaliManagePerizinans::class)
@@ -213,6 +217,15 @@ class PerizinanNotificationAndModalTest extends TestCase
 
         // Action peringatan tunggakan harus ter-mount sebagai modal pengganti toast
         $component->assertActionMounted('peringatanTunggakan');
+
+        // Pastikan arguments modal memuat sisa tagihan yang benar (bukan Rp 0)
+        $arguments = $component->get('mountedActionsArguments.0') ?? [];
+        if (! empty($arguments)) {
+            $this->assertSame('Rp 350.000', $arguments['total_tunggakan'] ?? null);
+            $this->assertNotEmpty($arguments['tagihan_list'] ?? []);
+            $this->assertSame('Rp 350.000', $arguments['tagihan_list'][0]['sisa'] ?? null);
+            $this->assertNotSame('Rp 0', $arguments['tagihan_list'][0]['sisa'] ?? null);
+        }
     }
 
     public function test_modal_tunggakan_blade_view_merender_rincian_tagihan(): void
@@ -222,17 +235,21 @@ class PerizinanNotificationAndModalTest extends TestCase
             'tagihanList' => [
                 [
                     'jenis' => 'SPP Bulanan',
-                    'periode' => 'Bulan 7 / 2026',
+                    'periode' => 'Juli 2026',
                     'nominal' => 'Rp 350.000',
                     'sisa' => 'Rp 350.000',
+                    'jatuh_tempo' => '10 Jul 2026',
+                    'status' => 'belum_lunas',
                 ],
             ],
+            'totalTunggakan' => 'Rp 350.000',
         ])->render();
 
         $this->assertStringContainsString('Santri Budi', $rendered);
         $this->assertStringContainsString('SPP Bulanan', $rendered);
-        $this->assertStringContainsString('Bulan 7 / 2026', $rendered);
+        $this->assertStringContainsString('Juli 2026', $rendered);
         $this->assertStringContainsString('Rp 350.000', $rendered);
+        $this->assertStringContainsString('Total Tanggungan Belum Lunas', $rendered);
         $this->assertStringContainsString('Tagihan & Pembayaran', $rendered);
     }
 

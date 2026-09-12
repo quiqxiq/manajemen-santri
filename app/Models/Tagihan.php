@@ -47,12 +47,21 @@ class Tagihan extends Model
 
     public function totalDibayar(): float
     {
+        if ($this->relationLoaded('pembayaran')) {
+            return (float) $this->pembayaran->sum('jumlah_bayar');
+        }
+
         return (float) $this->pembayaran()->sum('jumlah_bayar');
     }
 
     public function sisaTagihan(): float
     {
         return max(0, (float) $this->nominal - $this->totalDibayar());
+    }
+
+    public function getSisaTagihanAttribute(): float
+    {
+        return $this->sisaTagihan();
     }
 
     public function getActivitylogOptions(): LogOptions

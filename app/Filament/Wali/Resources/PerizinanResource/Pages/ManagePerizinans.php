@@ -27,10 +27,28 @@ class ManagePerizinans extends ManageRecords
                         if ($santri) {
                             $reason = app(PerizinanService::class)->checkCanApply($santri);
                             if ($reason) {
-                                $tagihanList = $santri->tagihan()
+                                $tagihanRecords = $santri->tagihan()
+                                    ->with('pembayaran')
                                     ->whereIn('status', ['belum_lunas', 'sebagian'])
-                                    ->get()
-                                    ->map(fn ($t) => [
+                                    ->orderBy('jatuh_tempo')
+                                    ->get();
+
+                                $tagihanList = $tagihanRecords->map(function ($t) {
+                                    $periode = '-';
+                                    if ($t->bulan) {
+                                        try {
+                                            $namaBulan = \Carbon\Carbon::create()->month((int) $t->bulan)->translatedFormat('F');
+                                            $periode = "{$namaBulan} {$t->tahun}";
+                                        } catch (\Throwable $e) {
+                                            $periode = "Bulan {$t->bulan} / {$t->tahun}";
+                                        }
+                                    } elseif ($t->tahun) {
+                                        $periode = "Tahun {$t->tahun}";
+                                    }
+
+                                    $sisa = $t->sisaTagihan();
+
+                                    return [
                                         'jenis' => match ($t->jenis) {
                                             'spp' => 'SPP Bulanan',
                                             'daftar_ulang' => 'Daftar Ulang',
@@ -39,15 +57,21 @@ class ManagePerizinans extends ManageRecords
                                             'kegiatan' => 'Uang Kegiatan',
                                             default => ucfirst(str_replace('_', ' ', (string) $t->jenis)),
                                         },
-                                        'periode' => "Bulan {$t->bulan} / {$t->tahun}",
+                                        'periode' => $periode,
+                                        'jatuh_tempo' => $t->jatuh_tempo ? $t->jatuh_tempo->format('d M Y') : null,
                                         'nominal' => 'Rp ' . number_format((float) $t->nominal, 0, ',', '.'),
-                                        'sisa' => 'Rp ' . number_format((float) $t->sisa_tagihan, 0, ',', '.'),
-                                    ])
-                                    ->toArray();
+                                        'sisa' => 'Rp ' . number_format($sisa, 0, ',', '.'),
+                                        'sisa_numeric' => $sisa,
+                                        'status' => $t->status,
+                                    ];
+                                })->toArray();
+
+                                $totalTunggakan = (float) $tagihanRecords->sum(fn ($t) => $t->sisaTagihan());
 
                                 $this->replaceMountedAction('peringatanTunggakan', [
                                     'nama_santri' => $santri->nama_lengkap,
                                     'tagihan_list' => $tagihanList,
+                                    'total_tunggakan' => 'Rp ' . number_format($totalTunggakan, 0, ',', '.'),
                                 ]);
 
                                 $action->halt();
@@ -87,6 +111,7 @@ class ManagePerizinans extends ManageRecords
             ->modalContent(fn (array $arguments) => view('filament.wali.components.modal-tunggakan', [
                 'namaSantri' => $arguments['nama_santri'] ?? 'Santri',
                 'tagihanList' => $arguments['tagihan_list'] ?? [],
+                'totalTunggakan' => $arguments['total_tunggakan'] ?? null,
             ]))
             ->action(fn () => null);
     }

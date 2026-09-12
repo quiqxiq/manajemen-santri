@@ -52,7 +52,14 @@ class PerizinanResource extends Resource
                         }
                         $santri = \App\Models\Santri::find($state);
                         if ($santri && $santri->memilikiTunggakan()) {
-                            return '⚠️ Perhatian: Santri ini memiliki tagihan yang belum lunas. Pengajuan izin tidak dapat diproses sampai tagihan dilunasi.';
+                            $total = (float) $santri->tagihan()
+                                ->whereIn('status', ['belum_lunas', 'sebagian'])
+                                ->get()
+                                ->sum(fn ($t) => $t->sisaTagihan());
+
+                            $formattedTotal = 'Rp ' . number_format($total, 0, ',', '.');
+
+                            return "⚠️ Perhatian: Santri ini memiliki tanggungan tagihan sebesar {$formattedTotal}. Pengajuan izin tidak dapat diproses sampai kewajiban pembayaran diselesaikan.";
                         }
 
                         return null;
