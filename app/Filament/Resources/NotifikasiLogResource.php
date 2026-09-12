@@ -98,15 +98,30 @@ class NotifikasiLogResource extends Resource
                     ->color('warning')
                     ->requiresConfirmation()
                     ->modalHeading('Kirim Ulang Notifikasi WhatsApp?')
-                    ->modalDescription('Log akan dijadwalkan ulang ke antrean pengiriman WhatsApp.')
+                    ->modalDescription('Pesan akan langsung dicoba kirimkan kembali ke nomor tujuan.')
                     ->visible(fn (NotifikasiLog $record): bool => in_array($record->status, ['failed', 'pending'], true))
                     ->action(function (NotifikasiLog $record): void {
-                        static::jadwalkanUlang($record);
+                        try {
+                            app(\App\Services\WhatsAppNotificationService::class)->kirimNotifikasi($record);
 
-                        Notification::make()
-                            ->title('Notifikasi dijadwalkan ulang')
-                            ->success()
-                            ->send();
+                            Notification::make()
+                                ->title('Notifikasi Berhasil Dikirim')
+                                ->body("Pesan telah berhasil terkirim ke {$record->nama_penerima} ({$record->no_hp_penerima}).")
+                                ->success()
+                                ->send();
+                        } catch (\Throwable $e) {
+                            $pesanError = $e->getMessage();
+                            if (str_contains(strtolower($pesanError), 'session not ready')) {
+                                $pesanError = 'Sesi WhatsApp belum terhubung (belum scan QR / pairing). Silakan buka menu WhatsApp Gateway untuk menautkan perangkat.';
+                            }
+
+                            Notification::make()
+                                ->title('Pengiriman Gagal')
+                                ->body($pesanError)
+                                ->danger()
+                                ->persistent()
+                                ->send();
+                        }
                     }),
             ])
             ->toolbarActions([
@@ -118,36 +133,50 @@ class NotifikasiLogResource extends Resource
                         ->requiresConfirmation()
                         ->deselectRecordsAfterCompletion()
                         ->action(function (Collection $records): void {
-                            $count = 0;
+                            $service = app(\App\Services\WhatsAppNotificationService::class);
+                            $berhasil = 0;
+                            $gagal = 0;
+                            $lastError = null;
 
                             foreach ($records as $record) {
                                 if (in_array($record->status, ['failed', 'pending'], true)) {
-                                    static::jadwalkanUlang($record);
-                                    $count++;
+                                    try {
+                                        $service->kirimNotifikasi($record);
+                                        $berhasil++;
+                                    } catch (\Throwable $e) {
+                                        $gagal++;
+                                        $lastError = $e->getMessage();
+                                    }
                                 }
                             }
 
-                            Notification::make()
-                                ->title("{$count} notifikasi dijadwalkan ulang")
-                                ->success()
-                                ->send();
+                            if ($berhasil > 0 && $gagal === 0) {
+                                Notification::make()
+                                    ->title("{$berhasil} notifikasi berhasil dikirim")
+                                    ->success()
+                                    ->send();
+                            } elseif ($berhasil > 0 && $gagal > 0) {
+                                Notification::make()
+                                    ->title("{$berhasil} terkirim, {$gagal} gagal")
+                                    ->body($lastError)
+                                    ->warning()
+                                    ->send();
+                            } else {
+                                if (str_contains(strtolower((string) $lastError), 'session not ready')) {
+                                    $lastError = 'Sesi WhatsApp belum terhubung (belum scan QR). Buka menu WhatsApp Gateway untuk menautkan perangkat.';
+                                }
+
+                                Notification::make()
+                                    ->title("Pengiriman gagal ({$gagal} pesan)")
+                                    ->body($lastError)
+                                    ->danger()
+                                    ->persistent()
+                                    ->send();
+                            }
                         }),
                     Actions\DeleteBulkAction::make(),
                 ]),
             ]);
-    }
-
-    /**
-     * Setel ulang status menjadi pending lalu masukkan kembali ke antrean pengiriman.
-     */
-    private static function jadwalkanUlang(NotifikasiLog $record): void
-    {
-        $record->update([
-            'status' => 'pending',
-            'error_message' => null,
-        ]);
-
-        KirimNotifikasiWhatsApp::dispatch($record->id);
     }
 
     public static function getPages(): array
