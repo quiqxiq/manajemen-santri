@@ -22,6 +22,12 @@ class PerizinanNotificationAndModalTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        \Illuminate\Support\Facades\Queue::fake([\App\Jobs\KirimNotifikasiWhatsApp::class]);
+    }
+
     private function siapkanData(): array
     {
         // Setup Wali
