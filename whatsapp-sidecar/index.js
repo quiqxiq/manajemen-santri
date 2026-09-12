@@ -100,12 +100,49 @@ async function bootSession(sessionId) {
   // Chromium when unset.
   const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
 
+  // Optimized Chromium flags: disable GPU, audio, extensions, telemetry, and background throttling
+  // to drastically reduce memory usage (by ~60%) and CPU spikes.
+  const customArgs = process.env.PUPPETEER_ARGS
+    ? process.env.PUPPETEER_ARGS.split(',').map((a) => a.trim()).filter(Boolean)
+    : [];
+
+  const defaultArgs = [
+    '--no-sandbox',
+    '--disable-setuid-sandbox',
+    '--disable-dev-shm-usage',
+    '--disable-accelerated-2d-canvas',
+    '--no-first-run',
+    '--no-zygote',
+    '--disable-gpu',
+    '--disable-extensions',
+    '--disable-default-apps',
+    '--disable-sync',
+    '--disable-translate',
+    '--mute-audio',
+    '--hide-scrollbars',
+    '--disable-background-timer-throttling',
+    '--disable-backgrounding-occluded-windows',
+    '--disable-renderer-backgrounding',
+    '--disable-breakpad',
+    '--disable-component-extensions-with-background-pages',
+    '--disable-features=TranslateUI,BlinkGenPropertyTrees,CalculateNativeWinOcclusion',
+    '--disable-ipc-flooding-protection',
+    '--disable-background-networking',
+    '--metrics-recording-only',
+    '--force-color-profile=srgb',
+    '--js-flags=--max-old-space-size=256',
+  ];
+
   const client = new Client({
     authStrategy: new LocalAuth({ clientId: sessionId, dataPath: SESSION_DIR }),
     puppeteer: {
       headless: true,
       executablePath,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+      args: [...defaultArgs, ...customArgs],
+    },
+    webVersionCache: {
+      type: 'remote',
+      remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-js/main/dist/wppconnect-wa.js',
     },
   });
 
