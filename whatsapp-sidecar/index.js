@@ -108,17 +108,81 @@ function serializeMessage(m) {
   };
 }
 
+async function forceKillBrowser(session) {
+  if (!session || !session.client) return;
+  const client = session.client;
+  let pid = null;
+  try {
+    if (client.pupBrowser) {
+      const proc = client.pupBrowser.process();
+      if (proc && proc.pid) pid = proc.pid;
+      await client.pupBrowser.close().catch(() => {});
+    }
+  } catch (_) {}
+
+  try {
+    await client.destroy().catch(() => {});
+  } catch (_) {}
+
+  if (pid) {
+    try {
+      if (process.platform === 'win32') {
+        require('child_process').execSync(`taskkill /F /T /PID ${pid}`, { stdio: 'ignore' });
+      } else {
+        process.kill(pid, 'SIGKILL');
+      }
+    } catch (_) {}
+  }
+}
+
+async function safeRemoveDir(dirPath, maxRetries = 6, delayMs = 500) {
+  if (!fs.existsSync(dirPath)) return;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      fs.rmSync(dirPath, { recursive: true, force: true, maxRetries: 3 });
+      return;
+    } catch (err) {
+      if (attempt === maxRetries) {
+        // Fallback jika Windows masih mengunci: coba rename direktori agar tidak menghambat start sesi baru
+        if (process.platform === 'win32') {
+          try {
+            const trashDir = `${dirPath}_trash_${Date.now()}`;
+            fs.renameSync(dirPath, trashDir);
+            console.log(`[laravel-wa-sidecar] Renamed locked directory to ${trashDir}`);
+            return;
+          } catch (renameErr) {
+            console.warn(`[laravel-wa-sidecar] Could not remove or rename ${dirPath}: ${err.message}`);
+          }
+        }
+      }
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+}
+
+function prepareSessionDir(sessionId) {
+  const authDir = path.join(SESSION_DIR, `session-${sessionId}`);
+  if (!fs.existsSync(authDir)) return;
+
+  // Pada Windows, jika Chromium sebelumnya mati mendadak, SingletonLock / lockfile
+  // dapat tertinggal dan menyebabkan Chrome menolak start. Bersihkan file lock ini.
+  const lockFiles = ['SingletonLock', 'lockfile', 'DevToolsActivePort'];
+  for (const f of lockFiles) {
+    const p = path.join(authDir, f);
+    try {
+      if (fs.existsSync(p)) fs.unlinkSync(p);
+    } catch (_) {}
+  }
+}
+
 async function bootSession(sessionId) {
   const existing = sessions.get(sessionId);
   if (existing) return existing;
 
   // Reuse a system Chrome/Chromium when PUPPETEER_EXECUTABLE_PATH is set
-  // (e.g. installed with --skip-chromium). Falls back to Puppeteer's bundled
-  // Chromium when unset.
   const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
 
-  // Optimized Chromium flags: disable GPU, audio, extensions, telemetry, and background throttling
-  // to drastically reduce memory usage (by ~60%) and CPU spikes.
   const customArgs = process.env.PUPPETEER_ARGS
     ? process.env.PUPPETEER_ARGS.split(',').map((a) => a.trim()).filter(Boolean)
     : [];
@@ -127,29 +191,20 @@ async function bootSession(sessionId) {
     '--no-sandbox',
     '--disable-setuid-sandbox',
     '--disable-dev-shm-usage',
-    '--disable-accelerated-2d-canvas',
-    '--no-first-run',
-    '--no-zygote',
     '--disable-gpu',
+    '--no-first-run',
+    '--no-default-browser-check',
     '--disable-extensions',
     '--disable-default-apps',
-    '--disable-sync',
     '--disable-translate',
     '--mute-audio',
     '--hide-scrollbars',
-    '--blink-settings=imagesEnabled=false',
     '--disable-background-timer-throttling',
     '--disable-backgrounding-occluded-windows',
     '--disable-renderer-backgrounding',
-    '--disable-breakpad',
-    '--disable-component-extensions-with-background-pages',
-    '--disable-features=TranslateUI,BlinkGenPropertyTrees,CalculateNativeWinOcclusion',
-    '--disable-ipc-flooding-protection',
-    '--disable-background-networking',
-    '--metrics-recording-only',
-    '--force-color-profile=srgb',
-    '--js-flags=--max-old-space-size=256',
   ];
+
+  prepareSessionDir(sessionId);
 
   const client = new Client({
     authStrategy: new LocalAuth({ clientId: sessionId, dataPath: SESSION_DIR }),
@@ -158,47 +213,53 @@ async function bootSession(sessionId) {
       executablePath,
       args: [...defaultArgs, ...customArgs],
     },
-    webVersionCache: {
-      type: 'remote',
-      remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-js/main/dist/wppconnect-wa.js',
-    },
   });
 
-  const session = { client, status: 'initializing', qrDataUri: null, pairingCode: null, subscribers: new Set() };
+  const session = { client, status: 'initializing', qrDataUri: null, pairingCode: null, error: null, subscribers: new Set() };
   sessions.set(sessionId, session);
 
   client.on('qr', async (qr) => {
     session.qrDataUri = await qrcode.toDataURL(qr);
     session.status = 'qr';
+    session.error = null;
+    console.log(`[laravel-wa-sidecar] [${sessionId}] QR code generated successfully`);
     broadcast(sessionId, 'qr', { dataUri: session.qrDataUri });
   });
 
-  // Pairing-code flow (whatsapp-web.js >= 1.26). A fresh code is emitted every
-  // `intervalMs` until the phone pairs. Broadcast it so the UI can show updates
-  // live (SSE) instead of polling.
+  // Pairing-code flow (whatsapp-web.js >= 1.26).
   client.on('code', (code) => {
     session.pairingCode = code;
     session.status = 'qr';
+    session.error = null;
+    console.log(`[laravel-wa-sidecar] [${sessionId}] Pairing code generated: ${code}`);
     broadcast(sessionId, 'code', { code });
   });
 
   client.on('authenticated', () => {
     session.status = 'authenticated';
+    session.error = null;
+    console.log(`[laravel-wa-sidecar] [${sessionId}] Sesi terautentikasi`);
     broadcast(sessionId, 'authenticated', {});
   });
 
   client.on('auth_failure', (msg) => {
     session.status = 'auth_failure';
+    session.error = msg;
+    console.error(`[laravel-wa-sidecar] [${sessionId}] Autentikasi gagal: ${msg}`);
     broadcast(sessionId, 'auth_failure', { message: msg });
   });
 
   client.on('ready', () => {
     session.status = 'ready';
+    session.error = null;
+    console.log(`[laravel-wa-sidecar] [${sessionId}] Sesi ONLINE & READY`);
     broadcast(sessionId, 'ready', {});
   });
 
   client.on('disconnected', (reason) => {
     session.status = 'disconnected';
+    session.error = String(reason);
+    console.log(`[laravel-wa-sidecar] [${sessionId}] Terputus: ${reason}`);
     broadcast(sessionId, 'disconnected', { reason });
   });
 
@@ -217,6 +278,8 @@ async function bootSession(sessionId) {
   // /start to return immediately so the caller can poll for QR.
   client.initialize().catch((e) => {
     session.status = 'error';
+    session.error = e.message;
+    console.error(`[laravel-wa-sidecar] [${sessionId}] Inisialisasi error: ${e.message}`);
     broadcast(sessionId, 'error', { message: e.message });
   });
 
@@ -237,11 +300,6 @@ async function autoStartPersistedSessions() {
 }
 
 // Normalize a recipient to whatsapp-web.js's expected Chat ID format.
-//   `9665XXXXXXXX@c.us`  → returned as-is (already a WA ID)
-//   `+9665XXXXXXXX`      → stripped to digits + `@c.us`
-//   `9665XXXXXXXX`       → digits + `@c.us`
-//   `…@g.us`, `…@lid`    → returned as-is
-// Empty / falsy → returned as-is so whatsapp-web.js fails loudly.
 function normalizeWaId(input) {
   if (!input || typeof input !== 'string') return input;
   if (input.includes('@')) return input;
@@ -265,24 +323,16 @@ app.get('/health', (_, res) => {
 });
 
 app.get('/sessions', (_, res) => {
-  res.json([...sessions.entries()].map(([id, s]) => ({ id, status: s.status })));
+  res.json([...sessions.entries()].map(([id, s]) => ({ id, status: s.status, error: s.error || null })));
 });
 
 app.post('/sessions/:id/start', async (req, res, next) => {
   try {
     const s = await bootSession(req.params.id);
-    res.json({ id: req.params.id, status: s.status, qr: s.qrDataUri, pairingCode: s.pairingCode });
+    res.json({ id: req.params.id, status: s.status, qr: s.qrDataUri, pairingCode: s.pairingCode, error: s.error || null });
   } catch (e) { next(e); }
 });
 
-/**
- * Request authentication via a pairing code instead of QR.
- * whatsapp-web.js >= 1.26: the user enters the returned code on their phone
- * (WhatsApp → Settings → Linked Devices → Link with phone number instead).
- *
- * Body: { phoneNumber: '6281234567890', intervalMs?: 60000 }
- * The code regenerates every `intervalMs` (default 60s) until paired.
- */
 app.post('/sessions/:id/pairing-code', async (req, res, next) => {
   try {
     const s = await bootSession(req.params.id);
@@ -316,9 +366,11 @@ app.post('/sessions/:id/pairing-code', async (req, res, next) => {
 
 app.post('/sessions/:id/stop', async (req, res, next) => {
   try {
-    const s = getSession(req.params.id);
-    try { await s.client.destroy(); } catch (_) { /* already gone */ }
-    sessions.delete(req.params.id);
+    const s = sessions.get(req.params.id);
+    if (s) {
+      await forceKillBrowser(s);
+      sessions.delete(req.params.id);
+    }
     res.json({ ok: true });
   } catch (e) { next(e); }
 });
@@ -326,25 +378,31 @@ app.post('/sessions/:id/stop', async (req, res, next) => {
 app.delete('/sessions/:id', async (req, res, next) => {
   try {
     const s = sessions.get(req.params.id);
-    if (s) { try { await s.client.destroy(); } catch (_) {} sessions.delete(req.params.id); }
-    // Also wipe persisted auth so next start triggers a fresh QR.
+    if (s) {
+      await forceKillBrowser(s);
+      sessions.delete(req.params.id);
+    }
+    // Hapus direktori autentikasi secara aman dengan retries di Windows
     const authDir = path.join(SESSION_DIR, `session-${req.params.id}`);
-    if (fs.existsSync(authDir)) fs.rmSync(authDir, { recursive: true, force: true });
+    await safeRemoveDir(authDir);
     res.json({ ok: true });
-  } catch (e) { next(e); }
+  } catch (e) {
+    console.error(`[laravel-wa-sidecar] Delete session error: ${e.message}`);
+    next(e);
+  }
 });
 
 app.get('/sessions/:id/qr', (req, res, next) => {
   try {
     const s = getSession(req.params.id);
-    res.json({ status: s.status, qr: s.qrDataUri, pairingCode: s.pairingCode });
+    res.json({ status: s.status, qr: s.qrDataUri, pairingCode: s.pairingCode, error: s.error || null });
   } catch (e) { next(e); }
 });
 
 app.get('/sessions/:id/status', (req, res, next) => {
   try {
     const s = getSession(req.params.id);
-    res.json({ id: req.params.id, status: s.status, pairingCode: s.pairingCode });
+    res.json({ id: req.params.id, status: s.status, pairingCode: s.pairingCode, error: s.error || null });
   } catch (e) { next(e); }
 });
 
