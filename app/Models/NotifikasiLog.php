@@ -16,6 +16,10 @@ class NotifikasiLog extends Model
         'wali_santri_id',
         'pelanggaran_id',
         'tagihan_id',
+        'perizinan_id',
+        'pengurus_id',
+        'no_hp_tujuan',
+        'nama_tujuan',
         'channel',
         'pesan',
         'status',
@@ -46,5 +50,30 @@ class NotifikasiLog extends Model
     public function tagihan(): BelongsTo
     {
         return $this->belongsTo(Tagihan::class);
+    }
+
+    public function perizinan(): BelongsTo
+    {
+        return $this->belongsTo(Perizinan::class);
+    }
+
+    public function pengurus(): BelongsTo
+    {
+        return $this->belongsTo(Pengurus::class);
+    }
+
+    public function getNamaPenerimaAttribute(): string
+    {
+        return $this->nama_tujuan
+            ?? $this->waliSantri?->nama
+            ?? $this->pengurus?->nama
+            ?? '-';
+    }
+
+    public function getNoHpPenerimaAttribute(): ?string
+    {
+        return $this->no_hp_tujuan
+            ?? $this->waliSantri?->no_hp
+            ?? $this->pengurus?->no_hp;
     }
 }

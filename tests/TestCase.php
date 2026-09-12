@@ -17,6 +17,8 @@ abstract class TestCase extends BaseTestCase
 
         $app['config']->set('database.default', 'sqlite');
         $app['config']->set('database.connections.sqlite.database', ':memory:');
+        $app['config']->set('cache.default', 'array');
+        $app['config']->set('permission.cache.store', 'array');
 
         return $app;
     }

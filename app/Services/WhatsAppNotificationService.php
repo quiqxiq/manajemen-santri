@@ -37,12 +37,13 @@ class WhatsAppNotificationService
 
         $log->increment('attempts');
 
-        $noHp = $this->normalisasiNoHp($log->waliSantri?->no_hp);
+        $rawNoHp = $log->no_hp_tujuan ?? $log->waliSantri?->no_hp ?? $log->pengurus?->no_hp;
+        $noHp = $this->normalisasiNoHp($rawNoHp);
 
         if (blank($noHp)) {
             $log->update([
                 'status' => 'failed',
-                'error_message' => 'Nomor HP wali santri tidak tersedia.',
+                'error_message' => 'Nomor HP tujuan tidak tersedia.',
             ]);
 
             return;

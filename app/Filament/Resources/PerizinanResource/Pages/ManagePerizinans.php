@@ -32,6 +32,15 @@ class ManagePerizinans extends ManageRecords
                             }
                         }
                     }
+                })
+                ->after(function (\App\Models\Perizinan $record) {
+                    if ($record->status === 'diajukan') {
+                        app(PerizinanService::class)->kirimNotifikasiPengajuan($record);
+                    } elseif ($record->status === 'disetujui') {
+                        app(PerizinanService::class)->kirimNotifikasiDisetujui($record);
+                    } elseif ($record->status === 'ditolak') {
+                        app(PerizinanService::class)->kirimNotifikasiDitolak($record);
+                    }
                 }),
         ];
     }

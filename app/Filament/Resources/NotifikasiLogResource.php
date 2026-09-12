@@ -38,12 +38,22 @@ class NotifikasiLogResource extends Resource
                     ->label('Waktu Event')
                     ->dateTime()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('waliSantri.nama')
-                    ->label('Wali Santri Penerima')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('waliSantri.no_hp')
+                Tables\Columns\TextColumn::make('nama_penerima')
+                    ->label('Penerima')
+                    ->state(fn (NotifikasiLog $record): string => $record->nama_penerima)
+                    ->searchable(query: function ($query, string $search) {
+                        $query->where('nama_tujuan', 'like', "%{$search}%")
+                            ->orWhereHas('waliSantri', fn ($q) => $q->where('nama', 'like', "%{$search}%"))
+                            ->orWhereHas('pengurus', fn ($q) => $q->where('nama', 'like', "%{$search}%"));
+                    }),
+                Tables\Columns\TextColumn::make('no_hp_penerima')
                     ->label('No. WA')
-                    ->searchable(),
+                    ->state(fn (NotifikasiLog $record): ?string => $record->no_hp_penerima)
+                    ->searchable(query: function ($query, string $search) {
+                        $query->where('no_hp_tujuan', 'like', "%{$search}%")
+                            ->orWhereHas('waliSantri', fn ($q) => $q->where('no_hp', 'like', "%{$search}%"))
+                            ->orWhereHas('pengurus', fn ($q) => $q->where('no_hp', 'like', "%{$search}%"));
+                    }),
                 Tables\Columns\TextColumn::make('pesan')
                     ->label('Pesan')
                     ->limit(60),
@@ -71,6 +81,7 @@ class NotifikasiLogResource extends Resource
                     ->limit(40)
                     ->placeholder('-'),
             ])
+            ->modifyQueryUsing(fn ($query) => $query->with(['waliSantri', 'pengurus']))
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([

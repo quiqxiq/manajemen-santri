@@ -42,7 +42,7 @@ class WhatsAppTemplateResource extends Resource
                     ->maxLength(255),
                 Forms\Components\Textarea::make('pesan')
                     ->label('Isi Pesan')
-                    ->helperText('Placeholder yang didukung: {nama_santri}, {nama_kategori}, {poin}, {total_poin}, {nama_wali}')
+                    ->helperText('Placeholder didukung: {nama_santri}, {nama_wali}, {kamar_santri}, {no_hp_wali}, {jenis_izin}, {tanggal_mulai}, {tanggal_selesai}, {durasi_hari}, {alasan}, {disetujui_oleh}, {alasan_penolakan}, {nama_kategori}, {poin}, {total_poin}, {jenis_tagihan}, {nominal}, {nominal_bayar}, {sisa_tagihan}, {jatuh_tempo}, {tanggal_bayar}')
                     ->required()
                     ->rows(6)
                     ->columnSpanFull(),

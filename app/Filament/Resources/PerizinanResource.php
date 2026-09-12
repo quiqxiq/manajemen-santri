@@ -69,6 +69,18 @@ class PerizinanResource extends Resource
                     ->label('Alasan Penolakan (Bila Ditolak)')
                     ->nullable()
                     ->columnSpanFull(),
+                Forms\Components\DateTimePicker::make('tanggal_kembali')
+                    ->label('Waktu Kedatangan Kembali')
+                    ->nullable(),
+                Forms\Components\SpatieMediaLibraryFileUpload::make('bukti_kembali')
+                    ->label('Foto Bukti Santri Kembali')
+                    ->collection('bukti_kembali')
+                    ->image()
+                    ->nullable(),
+                Forms\Components\Textarea::make('catatan_kembali')
+                    ->label('Catatan Kedatangan')
+                    ->nullable()
+                    ->columnSpanFull(),
             ]);
     }
 
@@ -105,6 +117,16 @@ class PerizinanResource extends Resource
                     ) > 0 ? 'Ada Tunggakan' : 'Lunas')
                     ->badge()
                     ->color(fn (string $state): string => $state === 'Ada Tunggakan' ? 'danger' : 'success'),
+                Tables\Columns\SpatieMediaLibraryImageColumn::make('bukti_kembali')
+                    ->label('Bukti Kembali')
+                    ->collection('bukti_kembali')
+                    ->square()
+                    ->defaultImageUrl(null),
+                Tables\Columns\TextColumn::make('tanggal_kembali')
+                    ->label('Tgl Kembali')
+                    ->dateTime('d/m/Y H:i')
+                    ->sortable()
+                    ->placeholder('-'),
             ])
             ->modifyQueryUsing(fn ($query) => $query->with(['santri.tagihan']))
             ->defaultSort('created_at', 'desc')
@@ -130,6 +152,7 @@ class PerizinanResource extends Resource
                                 'status' => 'ditolak',
                                 'catatan_penolakan' => "Ditolak Otomatis (R1): {$reason}",
                             ]);
+                            app(PerizinanService::class)->kirimNotifikasiDitolak($record);
                             Notification::make()
                                 ->title('Pengajuan Ditolak Otomatis (R1)')
                                 ->body($reason)
@@ -142,6 +165,8 @@ class PerizinanResource extends Resource
                             'status' => 'disetujui',
                             'disetujui_oleh' => auth()->id(),
                         ]);
+
+                        app(PerizinanService::class)->kirimNotifikasiDisetujui($record);
 
                         Notification::make()
                             ->title('Perizinan Disetujui')
@@ -163,13 +188,69 @@ class PerizinanResource extends Resource
                             'status' => 'ditolak',
                             'catatan_penolakan' => $data['catatan_penolakan'],
                         ]);
+
+                        app(PerizinanService::class)->kirimNotifikasiDitolak($record);
+
                         Notification::make()
                             ->title('Perizinan Ditolak')
                             ->warning()
                             ->send();
                     })
                     ->visible(fn (Perizinan $record) => $record->status === 'diajukan'),
-                \Filament\Actions\EditAction::make(),
+                \Filament\Actions\Action::make('konfirmasiKembali')
+                    ->label('Konfirmasi Kembali')
+                    ->icon('heroicon-o-check-badge')
+                    ->color('info')
+                    ->visible(fn (Perizinan $record) => $record->status === 'disetujui')
+                    ->form([
+                        Forms\Components\DateTimePicker::make('tanggal_kembali')
+                            ->label('Waktu Kedatangan Santri')
+                            ->default(now())
+                            ->required(),
+                        Forms\Components\SpatieMediaLibraryFileUpload::make('bukti_kembali')
+                            ->label('Foto Bukti Kedatangan (Opsional oleh Petugas)')
+                            ->collection('bukti_kembali')
+                            ->image()
+                            ->nullable(),
+                        Forms\Components\Textarea::make('catatan_kembali')
+                            ->label('Catatan Petugas')
+                            ->placeholder('Contoh: Santri telah kembali dan dicek oleh pos keamanan.')
+                            ->rows(2),
+                    ])
+                    ->action(function (Perizinan $record, array $data) {
+                        $record->update([
+                            'status' => 'selesai',
+                            'tanggal_kembali' => $data['tanggal_kembali'],
+                            'catatan_kembali' => $data['catatan_kembali'] ?? null,
+                        ]);
+
+                        Notification::make()
+                            ->title('Perizinan Diselesaikan')
+                            ->body('Status perizinan telah diperbarui menjadi Selesai / Kembali.')
+                            ->success()
+                            ->send();
+                    }),
+                \Filament\Actions\Action::make('lihatBukti')
+                    ->label('Bukti')
+                    ->icon('heroicon-o-eye')
+                    ->color('gray')
+                    ->visible(fn (Perizinan $record): bool => $record->status === 'selesai' && $record->hasMedia('bukti_kembali'))
+                    ->modalHeading('Foto Bukti Santri Kembali')
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Tutup')
+                    ->modalContent(fn (Perizinan $record) => view('filament.wali.components.modal-lihat-bukti', [
+                        'perizinan' => $record,
+                    ])),
+                \Filament\Actions\EditAction::make()
+                    ->after(function (Perizinan $record) {
+                        if ($record->wasChanged('status')) {
+                            if ($record->status === 'disetujui') {
+                                app(PerizinanService::class)->kirimNotifikasiDisetujui($record);
+                            } elseif ($record->status === 'ditolak') {
+                                app(PerizinanService::class)->kirimNotifikasiDitolak($record);
+                            }
+                        }
+                    }),
                 \Filament\Actions\DeleteAction::make(),
             ])
             ->toolbarActions([

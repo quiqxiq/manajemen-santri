@@ -24,6 +24,21 @@ class WhatsAppSettings extends Settings
     /** Key template untuk pengingat tagihan jatuh tempo. */
     public string $template_jatuh_tempo;
 
+    /** Key template untuk notifikasi pengajuan perizinan ke petugas keamanan. */
+    public string $template_perizinan_diajukan;
+
+    /** Key template untuk notifikasi perizinan disetujui ke wali santri. */
+    public string $template_perizinan_disetujui;
+
+    /** Key template untuk notifikasi perizinan ditolak ke wali santri. */
+    public string $template_perizinan_ditolak;
+
+    /** Key template untuk notifikasi santri kembali ke pondok ke petugas keamanan. */
+    public string $template_perizinan_kembali;
+
+    /** Nomor kontak WhatsApp keamanan (opsional / fallback). */
+    public ?string $nomor_wa_keamanan;
+
     public static function group(): string
     {
         return 'whatsapp';
