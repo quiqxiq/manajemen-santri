@@ -473,4 +473,101 @@ class PerizinanNotificationAndModalTest extends TestCase
         $this->assertStringContainsString('Foto & Dokumen Bukti Santri Kembali', $rendered);
         $this->assertStringContainsString('Santri tiba dengan selamat', $rendered);
     }
+
+    public function test_media_preview_dan_download_dapat_diakses_tanpa_forbidden(): void
+    {
+        [$waliUser, $wali, $santri, $keamananUser] = $this->siapkanData();
+
+        \Illuminate\Support\Facades\Storage::fake('public');
+
+        $perizinan = Perizinan::create([
+            'santri_id' => $santri->id,
+            'jenis_izin' => 'pulang',
+            'tanggal_mulai' => now()->toDateString(),
+            'tanggal_selesai' => now()->addDays(2)->toDateString(),
+            'jam_kembali_rencana' => '17:00:00',
+            'alasan' => 'Libur semester',
+            'status' => 'disetujui',
+        ]);
+
+        $fakeDoc = \Illuminate\Http\UploadedFile::fake()->createWithContent('surat_keterangan.pdf', "%PDF-1.4\n%EOF");
+        $media = $perizinan->addMedia($fakeDoc)->toMediaCollection('dokumen_perizinan', 'public');
+
+        // 1. Wali anak dapat melihat preview dan download dokumen
+        $this->actingAs($waliUser)
+            ->get(route('perizinan.media.preview', $media))
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf');
+
+        $this->actingAs($waliUser)
+            ->get(route('perizinan.media.download', $media))
+            ->assertOk();
+
+        // 2. Petugas Keamanan dapat melihat preview dokumen
+        $this->actingAs($keamananUser)
+            ->get(route('perizinan.media.preview', $media))
+            ->assertOk();
+
+        // 3. User lain tanpa izin atau bukan wali anak mendapatkan 403 Forbidden
+        $otherUser = User::factory()->create(['username' => 'other-user']);
+        $this->actingAs($otherUser)
+            ->get(route('perizinan.media.preview', $media))
+            ->assertForbidden();
+
+        // 4. Tamu (unauthenticated) diarahkan ke login
+        auth()->logout();
+        $this->get(route('perizinan.media.preview', $media))
+            ->assertRedirect('/login');
+    }
+
+    public function test_indikator_warna_merah_sedang_pulang_dan_hijau_kembali_di_frontend(): void
+    {
+        [$waliUser, $wali, $santri] = $this->siapkanData();
+
+        $perizinan = Perizinan::create([
+            'santri_id' => $santri->id,
+            'jenis_izin' => 'pulang',
+            'tanggal_mulai' => now()->toDateString(),
+            'tanggal_selesai' => now()->addDays(2)->toDateString(),
+            'jam_kembali_rencana' => '17:00:00',
+            'alasan' => 'Keperluan keluarga',
+            'status' => 'disetujui',
+            'tanggal_kembali' => null,
+        ]);
+
+        // Status Sedang Pulang: Merah / danger
+        $this->assertSame('sedang_pulang', $perizinan->posisi_santri);
+        $this->assertSame('danger', $perizinan->posisi_santri_color, 'Warna posisi santri sedang pulang harus merah (danger)');
+        $this->assertStringContainsString('Sedang Pulang', $perizinan->posisi_santri_label);
+        $this->assertTrue($santri->isSedangPulang(), 'Santri harus teridentifikasi sedang pulang');
+
+        // Cek render blade modal: harus menampilkan badge merah
+        $modalSedangPulang = view('filament.wali.components.modal-lihat-bukti', [
+            'perizinan' => $perizinan,
+        ])->render();
+        $this->assertStringContainsString('SANTRI SEDANG PULANG', $modalSedangPulang);
+        $this->assertStringContainsString('text-red-700', $modalSedangPulang);
+
+        // Ubah status menjadi Selesai (Kembali): Hijau / success
+        $perizinan->update([
+            'status' => 'selesai',
+            'tanggal_kembali' => now(),
+            'catatan_kembali' => 'Sudah masuk asrama',
+        ]);
+        $perizinan->refresh();
+        $santri->refresh();
+
+        $this->assertSame('sudah_kembali', $perizinan->posisi_santri);
+        $this->assertSame('success', $perizinan->posisi_santri_color, 'Warna posisi santri sudah kembali harus hijau (success)');
+        $this->assertStringContainsString('Sudah Kembali', $perizinan->posisi_santri_label);
+        $this->assertFalse($santri->isSedangPulang(), 'Santri tidak lagi sedang pulang');
+
+        // Cek render blade modal: harus menampilkan badge hijau
+        $modalKembali = view('filament.wali.components.modal-lihat-bukti', [
+            'perizinan' => $perizinan,
+        ])->render();
+        $this->assertStringContainsString('SANTRI SUDAH KEMBALI', $modalKembali);
+        $this->assertStringContainsString('text-emerald-700', $modalKembali);
+    }
 }
+

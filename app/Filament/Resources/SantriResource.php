@@ -107,6 +107,11 @@ class SantriResource extends Resource
                     ->label('Kamar')
                     ->default('-')
                     ->sortable(),
+                Tables\Columns\TextColumn::make('posisi_pondok')
+                    ->label('Keberadaan')
+                    ->state(fn (Santri $record): string => $record->isSedangPulang() ? '🔴 Sedang Pulang' : '🟢 Di Pondok')
+                    ->badge()
+                    ->color(fn (Santri $record): string => $record->isSedangPulang() ? 'danger' : 'success'),
                 Tables\Columns\TextColumn::make('status')
                     ->label('Status')
                     ->badge()
@@ -144,7 +149,7 @@ class SantriResource extends Resource
                     ->relationship('kamar', 'nama_kamar'),
             ])
             ->modifyQueryUsing(fn ($query) => $query
-                ->with(['kamar', 'media'])
+                ->with(['kamar', 'media', 'perizinan'])
                 ->withSum('pelanggaran', 'poin')
                 ->withCount([
                     'tagihan as tagihan_tunggakan_count' => fn ($q) => $q->whereIn('status', ['belum_lunas', 'sebagian']),

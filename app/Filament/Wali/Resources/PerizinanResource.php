@@ -96,6 +96,8 @@ class PerizinanResource extends Resource
                 Forms\Components\SpatieMediaLibraryFileUpload::make('dokumen_perizinan')
                     ->label('Dokumen / Berkas Pendukung Izin')
                     ->collection('dokumen_perizinan')
+                    ->disk('public')
+                    ->visibility('public')
                     ->multiple()
                     ->acceptedFileTypes(['image/*', 'application/pdf'])
                     ->maxFiles(5)
@@ -111,6 +113,11 @@ class PerizinanResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('santri.nama_lengkap')
                     ->label('Nama Anak'),
+                Tables\Columns\TextColumn::make('posisi_santri')
+                    ->label('Posisi Santri')
+                    ->badge()
+                    ->state(fn (Perizinan $record): string => $record->posisi_santri_label)
+                    ->color(fn (Perizinan $record): string => $record->posisi_santri_color),
                 Tables\Columns\TextColumn::make('jenis_izin')
                     ->label('Jenis Izin')
                     ->badge(),
@@ -125,8 +132,8 @@ class PerizinanResource extends Resource
                     ->label('Status Persetujuan')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
-                        'disetujui' => 'success',
-                        'selesai' => 'info',
+                        'disetujui' => 'danger',
+                        'selesai' => 'success',
                         'ditolak' => 'danger',
                         default => 'warning',
                     }),
@@ -134,15 +141,7 @@ class PerizinanResource extends Resource
                     ->label('Status Kepulangan')
                     ->badge()
                     ->state(fn (Perizinan $record): string => $record->status_kepulangan_label)
-                    ->color(fn (Perizinan $record): string => match ($record->status_kepulangan) {
-                        'terlambat' => 'danger',
-                        'hampir_habis' => 'warning',
-                        'selesai_terlambat' => 'warning',
-                        'selesai_tepat_waktu' => 'info',
-                        'aktif' => 'success',
-                        'ditolak' => 'danger',
-                        default => 'gray',
-                    }),
+                    ->color(fn (Perizinan $record): string => $record->status_kepulangan_color),
                 Tables\Columns\TextColumn::make('catatan_penolakan')
                     ->label('Catatan Penolakan')
                     ->default('-'),
@@ -181,6 +180,8 @@ class PerizinanResource extends Resource
                         Forms\Components\SpatieMediaLibraryFileUpload::make('bukti_kembali')
                             ->label('Foto Bukti Kedatangan & Dokumen Pendukung Kembali')
                             ->collection('bukti_kembali')
+                            ->disk('public')
+                            ->visibility('public')
                             ->multiple()
                             ->acceptedFileTypes(['image/*', 'application/pdf'])
                             ->maxFiles(5)
@@ -192,12 +193,16 @@ class PerizinanResource extends Resource
                             ->placeholder('Contoh: Santri tiba dengan sehat dan selamat didampingi orang tua.')
                             ->rows(2),
                     ])
-                    ->action(function (Perizinan $record, array $data) {
+                    ->action(function (Perizinan $record, array $data, $schema = null) {
                         $record->update([
                             'status' => 'selesai',
                             'tanggal_kembali' => $data['tanggal_kembali'],
                             'catatan_kembali' => $data['catatan_kembali'] ?? null,
                         ]);
+
+                        if ($schema && method_exists($schema, 'model')) {
+                            $schema->model($record)->saveRelationships();
+                        }
 
                         app(\App\Services\PerizinanService::class)->kirimNotifikasiKembali($record);
 

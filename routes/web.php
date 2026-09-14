@@ -26,4 +26,13 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/whatsapp/sse/{session}', [WhatsAppSseController::class, 'stream'])
         ->where('session', '[A-Za-z0-9._-]+')
         ->name('whatsapp.sse');
+
+    /*
+     * Akses berkas & bukti dokumen perizinan (preview inline dan unduh)
+     */
+    Route::get('/perizinan/media/{media}/preview', [\App\Http\Controllers\PerizinanMediaController::class, 'preview'])
+        ->name('perizinan.media.preview');
+
+    Route::get('/perizinan/media/{media}/download', [\App\Http\Controllers\PerizinanMediaController::class, 'download'])
+        ->name('perizinan.media.download');
 });

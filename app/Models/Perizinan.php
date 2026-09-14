@@ -43,8 +43,11 @@ class Perizinan extends Model implements HasMedia
 
     public function registerMediaCollections(): void
     {
-        $this->addMediaCollection('dokumen_perizinan');
-        $this->addMediaCollection('bukti_kembali');
+        $this->addMediaCollection('dokumen_perizinan')
+            ->useDisk('public');
+
+        $this->addMediaCollection('bukti_kembali')
+            ->useDisk('public');
     }
 
     public function santri(): BelongsTo
@@ -121,19 +124,79 @@ class Perizinan extends Model implements HasMedia
     }
 
     /**
+     * Posisi riil santri terkait perizinan:
+     * - 'sedang_pulang': santri sedang berada di luar pondok (izin aktif/disetujui). Ditandai MERAH.
+     * - 'sudah_kembali': santri sudah kembali tiba di pondok (izin selesai). Ditandai HIJAU.
+     * - 'diajukan': pengajuan menunggu persetujuan (santri masih di pondok). Ditandai KUNING.
+     * - 'ditolak': izin ditolak (santri tetap di pondok). Ditandai ABU-ABU.
+     */
+    public function getPosisiSantriAttribute(): string
+    {
+        if ($this->status === 'selesai' || $this->tanggal_kembali !== null) {
+            return 'sudah_kembali';
+        }
+
+        if ($this->status === 'disetujui') {
+            return 'sedang_pulang';
+        }
+
+        if ($this->status === 'diajukan') {
+            return 'diajukan';
+        }
+
+        return 'ditolak';
+    }
+
+    public function getPosisiSantriLabelAttribute(): string
+    {
+        return match ($this->posisi_santri) {
+            'sedang_pulang' => '🔴 Sedang Pulang',
+            'sudah_kembali' => '🟢 Sudah Kembali',
+            'diajukan' => '⏳ Menunggu Izin',
+            'ditolak' => '⚪ Di Pondok (Izin Ditolak)',
+            default => '-',
+        };
+    }
+
+    public function getPosisiSantriColorAttribute(): string
+    {
+        return match ($this->posisi_santri) {
+            'sedang_pulang' => 'danger',  // Merah
+            'sudah_kembali' => 'success', // Hijau
+            'diajukan' => 'warning',      // Kuning
+            default => 'gray',
+        };
+    }
+
+    /**
      * Label representasi visual untuk status kepulangan.
      */
     public function getStatusKepulanganLabelAttribute(): string
     {
         return match ($this->status_kepulangan) {
-            'terlambat' => 'Terlambat Kembali',
-            'hampir_habis' => 'Hampir Habis (H-1 / Hari Ini)',
-            'aktif' => 'Izin Aktif / Menunggu Kembali',
-            'selesai_tepat_waktu' => 'Kembali Tepat Waktu',
-            'selesai_terlambat' => 'Kembali Terlambat',
+            'terlambat' => 'Sedang Pulang (Terlambat)',
+            'hampir_habis' => 'Sedang Pulang (H-1 / Hari Ini)',
+            'aktif' => 'Sedang Pulang (Izin Berjalan)',
+            'selesai_tepat_waktu' => 'Sudah Kembali (Tepat Waktu)',
+            'selesai_terlambat' => 'Sudah Kembali (Terlambat)',
             'diajukan' => 'Menunggu Persetujuan',
             'ditolak' => 'Ditolak',
             default => ucfirst((string) $this->status),
+        };
+    }
+
+    /**
+     * Warna badge status kepulangan:
+     * - Ketika sedang pulang: MERAH (danger)
+     * - Ketika sudah kembali: HIJAU (success)
+     */
+    public function getStatusKepulanganColorAttribute(): string
+    {
+        return match ($this->status_kepulangan) {
+            'terlambat', 'hampir_habis', 'aktif' => 'danger', // Merah saat sedang pulang
+            'selesai_tepat_waktu', 'selesai_terlambat' => 'success', // Hijau saat sudah kembali
+            'diajukan' => 'warning',
+            default => 'gray',
         };
     }
 

@@ -64,6 +64,8 @@ class PerizinanResource extends Resource
                 Forms\Components\SpatieMediaLibraryFileUpload::make('dokumen_perizinan')
                     ->label('Dokumen Pendukung Pengajuan Izin')
                     ->collection('dokumen_perizinan')
+                    ->disk('public')
+                    ->visibility('public')
                     ->multiple()
                     ->acceptedFileTypes(['image/*', 'application/pdf'])
                     ->maxFiles(5)
@@ -90,6 +92,8 @@ class PerizinanResource extends Resource
                 Forms\Components\SpatieMediaLibraryFileUpload::make('bukti_kembali')
                     ->label('Foto & Dokumen Bukti Santri Kembali')
                     ->collection('bukti_kembali')
+                    ->disk('public')
+                    ->visibility('public')
                     ->multiple()
                     ->acceptedFileTypes(['image/*', 'application/pdf'])
                     ->maxFiles(5)
@@ -124,28 +128,38 @@ class PerizinanResource extends Resource
                     ->date('d/m/Y')
                     ->description(fn (Perizinan $record): string => ($record->jam_kembali_rencana ? substr($record->jam_kembali_rencana, 0, 5) . ' WIB' : '17:00 WIB') . ' • ' . $record->sisa_waktu_label)
                     ->sortable(),
-                Tables\Columns\TextColumn::make('status')
-                    ->label('Status')
+                Tables\Columns\TextColumn::make('posisi_santri')
+                    ->label('Posisi Santri')
                     ->badge()
+                    ->state(fn (Perizinan $record): string => $record->posisi_santri_label)
+                    ->color(fn (Perizinan $record): string => $record->posisi_santri_color)
+                    ->icon(fn (Perizinan $record): string => match ($record->posisi_santri) {
+                        'sedang_pulang' => 'heroicon-m-arrow-left-on-rectangle',
+                        'sudah_kembali' => 'heroicon-m-check-circle',
+                        'diajukan' => 'heroicon-m-clock',
+                        default => 'heroicon-m-x-circle',
+                    }),
+                Tables\Columns\TextColumn::make('status')
+                    ->label('Status Persetujuan')
+                    ->badge()
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'disetujui' => 'Disetujui (Sedang Pulang)',
+                        'selesai' => 'Selesai (Sudah Kembali)',
+                        'diajukan' => 'Menunggu Izin',
+                        'ditolak' => 'Ditolak',
+                        default => ucfirst($state),
+                    })
                     ->color(fn (string $state): string => match ($state) {
-                        'disetujui' => 'success',
-                        'selesai' => 'info',
-                        'ditolak' => 'danger',
+                        'disetujui' => 'danger',  // Merah saat sedang pulang
+                        'selesai' => 'success',   // Hijau saat sudah kembali
+                        'ditolak' => 'gray',
                         default => 'warning',
                     }),
                 Tables\Columns\TextColumn::make('status_kepulangan')
                     ->label('Status Kepulangan')
                     ->badge()
                     ->state(fn (Perizinan $record): string => $record->status_kepulangan_label)
-                    ->color(fn (Perizinan $record): string => match ($record->status_kepulangan) {
-                        'terlambat' => 'danger',
-                        'hampir_habis' => 'warning',
-                        'selesai_terlambat' => 'warning',
-                        'selesai_tepat_waktu' => 'info',
-                        'aktif' => 'success',
-                        'ditolak' => 'danger',
-                        default => 'gray',
-                    }),
+                    ->color(fn (Perizinan $record): string => $record->status_kepulangan_color),
                 Tables\Columns\TextColumn::make('santri_tunggakan')
                     ->label('Status Tunggakan (R1)')
                     ->state(fn (Perizinan $record): string => (
@@ -156,6 +170,7 @@ class PerizinanResource extends Resource
                 Tables\Columns\SpatieMediaLibraryImageColumn::make('bukti_kembali')
                     ->label('Bukti Kembali')
                     ->collection('bukti_kembali')
+                    ->disk('public')
                     ->square()
                     ->defaultImageUrl(null),
                 Tables\Columns\TextColumn::make('tanggal_kembali')
@@ -261,7 +276,7 @@ class PerizinanResource extends Resource
                 \Filament\Actions\Action::make('konfirmasiKembali')
                     ->label('Konfirmasi Kembali')
                     ->icon('heroicon-o-check-badge')
-                    ->color('info')
+                    ->color('success')
                     ->visible(fn (Perizinan $record) => $record->status === 'disetujui')
                     ->form([
                         Forms\Components\DateTimePicker::make('tanggal_kembali')
@@ -271,6 +286,8 @@ class PerizinanResource extends Resource
                         Forms\Components\SpatieMediaLibraryFileUpload::make('bukti_kembali')
                             ->label('Foto & Dokumen Bukti Kedatangan (Opsional oleh Petugas)')
                             ->collection('bukti_kembali')
+                            ->disk('public')
+                            ->visibility('public')
                             ->multiple()
                             ->acceptedFileTypes(['image/*', 'application/pdf'])
                             ->maxFiles(5)
@@ -281,12 +298,16 @@ class PerizinanResource extends Resource
                             ->placeholder('Contoh: Santri telah kembali dan diperiksa oleh pos keamanan.')
                             ->rows(2),
                     ])
-                    ->action(function (Perizinan $record, array $data) {
+                    ->action(function (Perizinan $record, array $data, $schema = null) {
                         $record->update([
                             'status' => 'selesai',
                             'tanggal_kembali' => $data['tanggal_kembali'],
                             'catatan_kembali' => $data['catatan_kembali'] ?? null,
                         ]);
+
+                        if ($schema && method_exists($schema, 'model')) {
+                            $schema->model($record)->saveRelationships();
+                        }
 
                         Notification::make()
                             ->title('Perizinan Diselesaikan')

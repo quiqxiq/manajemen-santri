@@ -87,6 +87,17 @@ class Santri extends Model implements HasMedia
         return $this->tagihan()->whereIn('status', ['belum_lunas', 'sebagian'])->exists();
     }
 
+    /**
+     * Cek apakah santri sedang dalam izin aktif / sedang pulang di luar pondok.
+     */
+    public function isSedangPulang(): bool
+    {
+        return $this->perizinan()
+            ->where('status', 'disetujui')
+            ->whereNull('tanggal_kembali')
+            ->exists();
+    }
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()->logOnly(['status', 'kamar_id']);
