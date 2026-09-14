@@ -333,24 +333,13 @@ class PerizinanResource extends Resource
                             ->send();
                     }),
                 \Filament\Actions\Action::make('lihatDokumen')
-                    ->label('Lihat Berkas')
+                    ->label('Detail & Berkas')
                     ->icon('heroicon-o-document-magnifying-glass')
                     ->color('gray')
                     ->modalHeading('Detail & Berkas Perizinan Santri')
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Tutup')
                     ->modalWidth('2xl')
-                    ->modalContent(fn (Perizinan $record) => view('filament.wali.components.modal-lihat-bukti', [
-                        'perizinan' => $record,
-                    ])),
-                \Filament\Actions\Action::make('lihatBukti')
-                    ->label('Bukti')
-                    ->icon('heroicon-o-eye')
-                    ->color('gray')
-                    ->visible(fn (Perizinan $record): bool => $record->status === 'selesai' && $record->hasMedia('bukti_kembali'))
-                    ->modalHeading('Foto Bukti Santri Kembali')
-                    ->modalSubmitAction(false)
-                    ->modalCancelActionLabel('Tutup')
                     ->modalContent(fn (Perizinan $record) => view('filament.wali.components.modal-lihat-bukti', [
                         'perizinan' => $record,
                     ])),
