@@ -36,6 +36,9 @@ class WhatsAppSettings extends Settings
     /** Key template untuk notifikasi santri kembali ke pondok ke petugas keamanan. */
     public string $template_perizinan_kembali;
 
+    /** Key template untuk pengingat batas waktu kepulangan santri ke wali santri. */
+    public string $template_perizinan_pengingat_kembali;
+
     /** Nomor kontak WhatsApp keamanan (opsional / fallback). */
     public ?string $nomor_wa_keamanan;
 

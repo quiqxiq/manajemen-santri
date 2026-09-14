@@ -29,6 +29,8 @@ try {
       if (k === 'WHATSAPP_WEB_PORT' && !process.env.PORT) process.env.PORT = val;
       if (k === 'WHATSAPP_WEB_HOST' && !process.env.HOST) process.env.HOST = val;
       if (k === 'WHATSAPP_WEB_TOKEN' && !process.env.SIDECAR_TOKEN) process.env.SIDECAR_TOKEN = val;
+      if (k === 'WHATSAPP_WEB_PID_FILE' && !process.env.SIDECAR_PID_FILE) process.env.SIDECAR_PID_FILE = val;
+      if (k === 'WHATSAPP_WEB_SESSION_DIR' && !process.env.SESSION_DIR) process.env.SESSION_DIR = val;
     }
   }
 } catch (_) {}
@@ -36,8 +38,10 @@ try {
 const PORT = parseInt(process.env.PORT || '3001', 10);
 const HOST = process.env.HOST || '127.0.0.1';
 const TOKEN = process.env.SIDECAR_TOKEN || '';
-const SESSION_DIR = process.env.SESSION_DIR || path.join(__dirname, 'sessions');
-const PID_FILE = process.env.SIDECAR_PID_FILE || '';
+const defaultSessionDir = path.join(__dirname, '..', 'storage', 'app', 'whatsapp-sidecar', 'sessions');
+const SESSION_DIR = process.env.SESSION_DIR || defaultSessionDir;
+const defaultPidFile = path.join(__dirname, '..', 'storage', 'app', 'whatsapp-sidecar', 'sidecar.pid');
+const PID_FILE = process.env.SIDECAR_PID_FILE || defaultPidFile;
 const AUTO_START_SESSIONS = !['0', 'false', 'no', 'off'].includes(
   String(process.env.AUTO_START_SESSIONS ?? 'true').toLowerCase(),
 );
@@ -740,8 +744,24 @@ const server = app.listen(PORT, HOST, () => {
   });
 });
 
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.warn(`[laravel-wa-sidecar] Port ${PORT} is already in use. An active sidecar instance is likely already running on this port.`);
+  } else {
+    console.error(`[laravel-wa-sidecar] server error: ${err.message}`);
+  }
+});
+
 function shutdown(signal) {
   console.log(`[laravel-wa-sidecar] caught ${signal}, shutting down…`);
+  try {
+    if (PID_FILE && fs.existsSync(PID_FILE)) {
+      const recorded = fs.readFileSync(PID_FILE, 'utf8').trim();
+      if (recorded === String(process.pid)) {
+        fs.unlinkSync(PID_FILE);
+      }
+    }
+  } catch (_) {}
   Promise.all([...sessions.values()].map((s) => s.client.destroy().catch(() => {})))
     .finally(() => server.close(() => process.exit(0)));
   setTimeout(() => process.exit(1), 10000).unref();

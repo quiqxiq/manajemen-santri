@@ -13,6 +13,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use UnitEnum;
 
 class PerizinanResource extends Resource
@@ -51,9 +52,23 @@ class PerizinanResource extends Resource
                     ->label('Tanggal Selesai')
                     ->default(now()->addDays(2))
                     ->required(),
+                Forms\Components\TimePicker::make('jam_kembali_rencana')
+                    ->label('Jam Batas Kepulangan (WIB)')
+                    ->default('17:00:00')
+                    ->seconds(false)
+                    ->helperText('Batas jam kepulangan santri ke pondok pada tanggal selesai.'),
                 Forms\Components\Textarea::make('alasan')
                     ->label('Alasan Perizinan')
                     ->required()
+                    ->columnSpanFull(),
+                Forms\Components\SpatieMediaLibraryFileUpload::make('dokumen_perizinan')
+                    ->label('Dokumen Pendukung Pengajuan Izin')
+                    ->collection('dokumen_perizinan')
+                    ->multiple()
+                    ->acceptedFileTypes(['image/*', 'application/pdf'])
+                    ->maxFiles(5)
+                    ->maxSize(5120)
+                    ->helperText('Surat keterangan dokter, undangan keluarga, surat permohonan dll (Gambar / PDF maks 5MB).')
                     ->columnSpanFull(),
                 Forms\Components\Select::make('status')
                     ->label('Status Persetujuan')
@@ -73,10 +88,15 @@ class PerizinanResource extends Resource
                     ->label('Waktu Kedatangan Kembali')
                     ->nullable(),
                 Forms\Components\SpatieMediaLibraryFileUpload::make('bukti_kembali')
-                    ->label('Foto Bukti Santri Kembali')
+                    ->label('Foto & Dokumen Bukti Santri Kembali')
                     ->collection('bukti_kembali')
-                    ->image()
-                    ->nullable(),
+                    ->multiple()
+                    ->acceptedFileTypes(['image/*', 'application/pdf'])
+                    ->maxFiles(5)
+                    ->maxSize(5120)
+                    ->helperText('Foto kedatangan di gerbang/pos pondok atau dokumen kepulangan lainnya.')
+                    ->nullable()
+                    ->columnSpanFull(),
                 Forms\Components\Textarea::make('catatan_kembali')
                     ->label('Catatan Kedatangan')
                     ->nullable()
@@ -96,10 +116,13 @@ class PerizinanResource extends Resource
                     ->label('Jenis Izin')
                     ->badge(),
                 Tables\Columns\TextColumn::make('tanggal_mulai')
-                    ->date()
+                    ->label('Mulai')
+                    ->date('d/m/Y')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('tanggal_selesai')
-                    ->date()
+                    ->label('Batas Kepulangan')
+                    ->date('d/m/Y')
+                    ->description(fn (Perizinan $record): string => ($record->jam_kembali_rencana ? substr($record->jam_kembali_rencana, 0, 5) . ' WIB' : '17:00 WIB') . ' • ' . $record->sisa_waktu_label)
                     ->sortable(),
                 Tables\Columns\TextColumn::make('status')
                     ->label('Status')
@@ -109,6 +132,19 @@ class PerizinanResource extends Resource
                         'selesai' => 'info',
                         'ditolak' => 'danger',
                         default => 'warning',
+                    }),
+                Tables\Columns\TextColumn::make('status_kepulangan')
+                    ->label('Status Kepulangan')
+                    ->badge()
+                    ->state(fn (Perizinan $record): string => $record->status_kepulangan_label)
+                    ->color(fn (Perizinan $record): string => match ($record->status_kepulangan) {
+                        'terlambat' => 'danger',
+                        'hampir_habis' => 'warning',
+                        'selesai_terlambat' => 'warning',
+                        'selesai_tepat_waktu' => 'info',
+                        'aktif' => 'success',
+                        'ditolak' => 'danger',
+                        default => 'gray',
                     }),
                 Tables\Columns\TextColumn::make('santri_tunggakan')
                     ->label('Status Tunggakan (R1)')
@@ -128,7 +164,7 @@ class PerizinanResource extends Resource
                     ->sortable()
                     ->placeholder('-'),
             ])
-            ->modifyQueryUsing(fn ($query) => $query->with(['santri.tagihan', 'santri.kamar', 'media']))
+            ->modifyQueryUsing(fn ($query) => $query->with(['santri.tagihan', 'santri.kamar', 'media', 'disetujuiOleh']))
             ->defaultSort('created_at', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
@@ -138,6 +174,30 @@ class PerizinanResource extends Resource
                         'ditolak' => 'Ditolak',
                         'selesai' => 'Selesai',
                     ]),
+                Tables\Filters\SelectFilter::make('status_kepulangan')
+                    ->label('Status Keterlambatan')
+                    ->options([
+                        'hampir_habis' => 'Hampir Habis (H-1 / Hari Ini)',
+                        'terlambat' => 'Terlambat Kembali',
+                        'aktif' => 'Izin Berjalan (Aktif)',
+                    ])
+                    ->query(function (Builder $query, array $data) {
+                        if (! empty($data['value'])) {
+                            if ($data['value'] === 'terlambat') {
+                                $query->where('status', 'disetujui')
+                                    ->whereNull('tanggal_kembali')
+                                    ->whereRaw("CONCAT(tanggal_selesai, ' ', COALESCE(jam_kembali_rencana, '17:00:00')) < ?", [now()]);
+                            } elseif ($data['value'] === 'hampir_habis') {
+                                $query->where('status', 'disetujui')
+                                    ->whereNull('tanggal_kembali')
+                                    ->whereRaw("CONCAT(tanggal_selesai, ' ', COALESCE(jam_kembali_rencana, '17:00:00')) >= ?", [now()])
+                                    ->whereRaw("CONCAT(tanggal_selesai, ' ', COALESCE(jam_kembali_rencana, '17:00:00')) <= ?", [now()->addHours(24)]);
+                            } elseif ($data['value'] === 'aktif') {
+                                $query->where('status', 'disetujui')
+                                    ->whereNull('tanggal_kembali');
+                            }
+                        }
+                    }),
             ])
             ->recordActions([
                 \Filament\Actions\Action::make('setujui')
@@ -170,6 +230,7 @@ class PerizinanResource extends Resource
 
                         Notification::make()
                             ->title('Perizinan Disetujui')
+                            ->body('Persetujuan berhasil disimpan dan notifikasi telah dikirimkan ke wali santri.')
                             ->success()
                             ->send();
                     })
@@ -208,13 +269,16 @@ class PerizinanResource extends Resource
                             ->default(now())
                             ->required(),
                         Forms\Components\SpatieMediaLibraryFileUpload::make('bukti_kembali')
-                            ->label('Foto Bukti Kedatangan (Opsional oleh Petugas)')
+                            ->label('Foto & Dokumen Bukti Kedatangan (Opsional oleh Petugas)')
                             ->collection('bukti_kembali')
-                            ->image()
+                            ->multiple()
+                            ->acceptedFileTypes(['image/*', 'application/pdf'])
+                            ->maxFiles(5)
+                            ->maxSize(5120)
                             ->nullable(),
                         Forms\Components\Textarea::make('catatan_kembali')
-                            ->label('Catatan Petugas')
-                            ->placeholder('Contoh: Santri telah kembali dan dicek oleh pos keamanan.')
+                            ->label('Catatan Petugas Pos Keamanan')
+                            ->placeholder('Contoh: Santri telah kembali dan diperiksa oleh pos keamanan.')
                             ->rows(2),
                     ])
                     ->action(function (Perizinan $record, array $data) {
@@ -230,6 +294,34 @@ class PerizinanResource extends Resource
                             ->success()
                             ->send();
                     }),
+                \Filament\Actions\Action::make('ingatkanWali')
+                    ->label('Ingatkan WA')
+                    ->icon('heroicon-o-bell-alert')
+                    ->color('warning')
+                    ->visible(fn (Perizinan $record): bool => $record->status === 'disetujui' && is_null($record->tanggal_kembali))
+                    ->requiresConfirmation()
+                    ->modalHeading('Kirim Pengingat Batas Waktu ke Wali')
+                    ->modalDescription('Kirim pesan WhatsApp pengingat batas kepulangan santri ke seluruh nomor wali yang terdaftar?')
+                    ->action(function (Perizinan $record) {
+                        app(PerizinanService::class)->kirimNotifikasiPengingatKembali($record);
+
+                        Notification::make()
+                            ->title('Pengingat Terkirim')
+                            ->body('Pesan WhatsApp pengingat kepulangan santri telah dikirimkan ke wali santri.')
+                            ->success()
+                            ->send();
+                    }),
+                \Filament\Actions\Action::make('lihatDokumen')
+                    ->label('Lihat Berkas')
+                    ->icon('heroicon-o-document-magnifying-glass')
+                    ->color('gray')
+                    ->modalHeading('Detail & Berkas Perizinan Santri')
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Tutup')
+                    ->modalWidth('2xl')
+                    ->modalContent(fn (Perizinan $record) => view('filament.wali.components.modal-lihat-bukti', [
+                        'perizinan' => $record,
+                    ])),
                 \Filament\Actions\Action::make('lihatBukti')
                     ->label('Bukti')
                     ->icon('heroicon-o-eye')

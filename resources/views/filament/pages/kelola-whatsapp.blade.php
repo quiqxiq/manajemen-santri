@@ -87,20 +87,38 @@
 
                 {{-- Controls: Session ID & Actions --}}
                 <div class="pt-2 border-t border-gray-100 dark:border-gray-800 flex flex-wrap gap-4 items-end justify-between">
-                    <div class="flex flex-col gap-1.5 w-full sm:w-72">
-                        <label class="text-xs font-medium text-gray-700 dark:text-gray-300">
-                            Nama / ID Sesi WhatsApp
-                        </label>
-                        <div class="relative">
-                            <input
-                                type="text"
-                                x-model="sessionId"
-                                @change="$wire.saveSessionId(sessionId)"
-                                placeholder="main"
-                                class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
-                            />
+                    <div class="flex flex-wrap gap-4 items-end">
+                        <div class="flex flex-col gap-1.5 w-full sm:w-64">
+                            <label class="text-xs font-medium text-gray-700 dark:text-gray-300">
+                                Nama / ID Sesi WhatsApp
+                            </label>
+                            <div class="relative">
+                                <input
+                                    type="text"
+                                    x-model="sessionId"
+                                    @change="$wire.saveSessionId(sessionId)"
+                                    placeholder="main"
+                                    class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                                />
+                            </div>
+                            <span class="text-[11px] text-gray-400">Default: <code>main</code> (ubah jika menggunakan nomor lain).</span>
                         </div>
-                        <span class="text-[11px] text-gray-400">Default: <code>main</code> (ubah jika menggunakan nomor lain).</span>
+
+                        <div class="flex flex-col gap-1.5 w-full sm:w-80">
+                            <label class="text-xs font-medium text-gray-700 dark:text-gray-300">
+                                Kontak Hotline / Pos Keamanan
+                            </label>
+                            <div class="relative">
+                                <input
+                                    type="text"
+                                    wire:model.defer="nomorWaKeamanan"
+                                    wire:change="saveNomorWaKeamanan($event.target.value)"
+                                    placeholder="081234567890, 081298765432"
+                                    class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                                />
+                            </div>
+                            <span class="text-[11px] text-gray-400">Nomor pos satpam/hotline (bisa lebih dari 1 dipisahkan koma).</span>
+                        </div>
                     </div>
 
                     <div class="flex items-center gap-2 flex-wrap">

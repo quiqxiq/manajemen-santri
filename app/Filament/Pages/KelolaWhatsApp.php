@@ -29,9 +29,29 @@ class KelolaWhatsApp extends Page
     /** ID sesi WhatsApp Web (sidecar) yang sedang dikelola. */
     public ?string $sessionId = 'main';
 
+    /** Nomor kontak WhatsApp pos keamanan / hotline (bisa beberapa nomor dipisahkan koma). */
+    public ?string $nomorWaKeamanan = '';
+
     public function mount(): void
     {
-        $this->sessionId = app(WhatsAppSettings::class)->session_id;
+        $settings = app(WhatsAppSettings::class);
+        $this->sessionId = $settings->session_id;
+        $this->nomorWaKeamanan = $settings->nomor_wa_keamanan ?? '';
+    }
+
+    public function saveNomorWaKeamanan(string $nomor): void
+    {
+        $settings = app(WhatsAppSettings::class);
+        $settings->nomor_wa_keamanan = trim($nomor);
+        $settings->save();
+
+        $this->nomorWaKeamanan = $settings->nomor_wa_keamanan;
+
+        Notification::make()
+            ->title('Nomor Hotline Keamanan Tersimpan')
+            ->body('Notifikasi perizinan juga akan diteruskan ke nomor ini.')
+            ->success()
+            ->send();
     }
 
     public function saveSessionId(string $sessionId): void

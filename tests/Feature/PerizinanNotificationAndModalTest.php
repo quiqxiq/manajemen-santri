@@ -324,4 +324,153 @@ class PerizinanNotificationAndModalTest extends TestCase
         $this->assertNotNull($perizinan->tanggal_kembali);
         $this->assertSame('Dikonfirmasi oleh petugas pos satpam', $perizinan->catatan_kembali);
     }
+
+    public function test_pengajuan_izin_memicu_notifikasi_ke_semua_petugas_keamanan_jika_lebih_dari_satu(): void
+    {
+        [$waliUser, $wali, $santri, $keamananUser1, $pengurusKeamanan1] = $this->siapkanData();
+
+        // Tambah Petugas Keamanan 2
+        $keamananUser2 = User::factory()->create(['username' => 'keamanan-2', 'name' => 'Petugas Keamanan 2']);
+        $keamananRole = Role::findByName('Keamanan', 'web');
+        $keamananUser2->assignRole($keamananRole);
+
+        $pengurusKeamanan2 = Pengurus::create([
+            'user_id' => $keamananUser2->id,
+            'nama' => 'Petugas Keamanan 2',
+            'bagian' => 'keamanan',
+            'no_hp' => '081288880003',
+        ]);
+
+        // Tambah hotline di settings
+        $settings = app(\App\Settings\WhatsAppSettings::class);
+        $settings->nomor_wa_keamanan = '081288880099, 081288880098';
+        $settings->save();
+
+        Livewire::actingAs($waliUser)
+            ->test(WaliManagePerizinans::class)
+            ->mountAction('create')
+            ->set('mountedActions.0.data.santri_id', $santri->id)
+            ->set('mountedActions.0.data.jenis_izin', 'pulang')
+            ->set('mountedActions.0.data.tanggal_mulai', now()->toDateString())
+            ->set('mountedActions.0.data.tanggal_selesai', now()->addDays(2)->toDateString())
+            ->set('mountedActions.0.data.jam_kembali_rencana', '17:00:00')
+            ->set('mountedActions.0.data.alasan', 'Menghadiri acara keluarga')
+            ->callMountedAction()
+            ->assertHasNoFormErrors();
+
+        $perizinan = Perizinan::first();
+        $this->assertNotNull($perizinan);
+
+        // Periksa log notifikasi WhatsApp dibuat untuk semua petugas dan hotline
+        $logs = NotifikasiLog::where('perizinan_id', $perizinan->id)->get();
+        $nomorLogs = $logs->pluck('no_hp_tujuan')->all();
+
+        $this->assertContains('081288880002', $nomorLogs, 'Petugas 1 harus menerima notifikasi');
+        $this->assertContains('081288880003', $nomorLogs, 'Petugas 2 harus menerima notifikasi');
+        $this->assertContains('081288880099', $nomorLogs, 'Hotline 1 harus menerima notifikasi');
+        $this->assertContains('081288880098', $nomorLogs, 'Hotline 2 harus menerima notifikasi');
+    }
+
+    public function test_command_pengingat_kepulangan_mengirim_notifikasi_ke_wali_saat_mendekati_tenggat(): void
+    {
+        [$waliUser, $wali, $santri] = $this->siapkanData();
+
+        // Buat perizinan yang disetujui dengan batas waktu besok (H-1)
+        $perizinanAktif = Perizinan::create([
+            'santri_id' => $santri->id,
+            'jenis_izin' => 'pulang',
+            'tanggal_mulai' => now()->subDay()->toDateString(),
+            'tanggal_selesai' => now()->addDay()->toDateString(),
+            'jam_kembali_rencana' => '17:00:00',
+            'alasan' => 'Pulang',
+            'status' => 'disetujui',
+        ]);
+
+        // Buat perizinan lain yang sudah selesai (tidak boleh dikirimi notif)
+        $perizinanSelesai = Perizinan::create([
+            'santri_id' => $santri->id,
+            'jenis_izin' => 'sakit',
+            'tanggal_mulai' => now()->subDays(3),
+            'tanggal_selesai' => now()->subDay(),
+            'tanggal_kembali' => now()->subDay(),
+            'alasan' => 'Sakit',
+            'status' => 'selesai',
+        ]);
+
+        // Jalankan artisan command pengingat
+        $this->artisan('whatsapp:pengingat-perizinan-kembali', ['--days' => 1])
+            ->assertSuccessful();
+
+        $perizinanAktif->refresh();
+        $this->assertNotNull($perizinanAktif->pengingat_kembali_sent_at, 'pengingat_kembali_sent_at harus terisi');
+
+        // Pastikan ada log notifikasi WhatsApp ke wali santri
+        $log = NotifikasiLog::where('perizinan_id', $perizinanAktif->id)
+            ->where('wali_santri_id', $wali->id)
+            ->first();
+
+        $this->assertNotNull($log, 'Log notifikasi pengingat ke wali santri harus tercatat');
+        $this->assertStringContainsString('Pengingat', $log->pesan);
+        $this->assertStringContainsString('Santri Budi', $log->pesan);
+
+        // Jalankan lagi di hari yang sama: harus dilewati (tidak duplikat)
+        $countSebelum = NotifikasiLog::where('perizinan_id', $perizinanAktif->id)->count();
+        $this->artisan('whatsapp:pengingat-perizinan-kembali', ['--days' => 1])
+            ->assertSuccessful();
+        $countSesudah = NotifikasiLog::where('perizinan_id', $perizinanAktif->id)->count();
+        $this->assertSame($countSebelum, $countSesudah, 'Tidak boleh mengirim pengingat ganda di hari yang sama');
+    }
+
+    public function test_wali_dapat_mengunggah_dokumen_pendukung_dan_multiple_bukti_kembali(): void
+    {
+        [$waliUser, $wali, $santri] = $this->siapkanData();
+
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $fakeDoc = \Illuminate\Http\UploadedFile::fake()->create('surat_dokter.pdf', 100, 'application/pdf');
+
+        Livewire::actingAs($waliUser)
+            ->test(WaliManagePerizinans::class)
+            ->mountAction('create')
+            ->set('mountedActions.0.data.santri_id', $santri->id)
+            ->set('mountedActions.0.data.jenis_izin', 'sakit')
+            ->set('mountedActions.0.data.tanggal_mulai', now()->toDateString())
+            ->set('mountedActions.0.data.tanggal_selesai', now()->addDays(2)->toDateString())
+            ->set('mountedActions.0.data.jam_kembali_rencana', '17:00:00')
+            ->set('mountedActions.0.data.alasan', 'Berobat ke rumah sakit')
+            ->set('mountedActions.0.data.dokumen_perizinan', [$fakeDoc])
+            ->callMountedAction()
+            ->assertHasNoFormErrors();
+
+        $perizinan = Perizinan::first();
+        $this->assertNotNull($perizinan);
+        $this->assertTrue($perizinan->hasMedia('dokumen_perizinan'), 'Dokumen perizinan harus tersimpan');
+
+        // Setujui izin
+        $perizinan->update(['status' => 'disetujui']);
+
+        // Wali lapor kembali dengan multiple foto bukti
+        $fakeImg1 = \Illuminate\Http\UploadedFile::fake()->image('foto_gerbang.jpg', 600, 600);
+        $fakeImg2 = \Illuminate\Http\UploadedFile::fake()->image('foto_asrama.jpg', 600, 600);
+
+        Livewire::actingAs($waliUser)
+            ->test(WaliManagePerizinans::class)
+            ->mountTableAction('laporKembali', $perizinan)
+            ->set('mountedActions.0.data.tanggal_kembali', now()->format('Y-m-d H:i:s'))
+            ->set('mountedActions.0.data.bukti_kembali', [$fakeImg1, $fakeImg2])
+            ->set('mountedActions.0.data.catatan_kembali', 'Santri tiba dengan selamat didampingi wali')
+            ->callMountedTableAction();
+
+        $perizinan->refresh();
+        $this->assertSame('selesai', $perizinan->status);
+        $this->assertGreaterThanOrEqual(2, $perizinan->getMedia('bukti_kembali')->count(), 'Multiple bukti kembali harus tersimpan');
+
+        // Render blade view modal-lihat-bukti
+        $rendered = view('filament.wali.components.modal-lihat-bukti', [
+            'perizinan' => $perizinan,
+        ])->render();
+
+        $this->assertStringContainsString('Dokumen Pendukung Pengajuan Izin', $rendered);
+        $this->assertStringContainsString('Foto & Dokumen Bukti Santri Kembali', $rendered);
+        $this->assertStringContainsString('Santri tiba dengan selamat', $rendered);
+    }
 }
